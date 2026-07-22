@@ -69,7 +69,15 @@ export default function ArchiveModal({ isOpen, onClose }: ArchiveModalProps) {
                   <div className="flex gap-2 text-xs mt-1">
                     <span className="text-slate-500">Due: {t.date}</span>
                     <span className="text-slate-600">&bull;</span>
-                    <span className="text-indigo-400">{categories.find(c => c.id === t.category)?.name || t.category || 'N/A'}</span>
+                    <span className="text-indigo-400">
+                      {(() => {
+                        let cat = categories.find(c => c.id === t.category);
+                        if (!cat) {
+                          cat = categories.find(c => c.name.toLowerCase() === t.category?.toLowerCase() || c.id.toLowerCase() === t.category?.toLowerCase());
+                        }
+                        return cat?.name || t.category || 'N/A';
+                      })()}
+                    </span>
                   </div>
                 </div>
                 <div className="flex gap-2">

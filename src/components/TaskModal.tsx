@@ -24,7 +24,15 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
         const task = tasks.find(t => t.id === taskIdToEdit);
         if (task) {
           setName(task.name);
-          setCategory(task.category || (categories[0]?.id || 'Personal'));
+          
+          let matchedCatId = task.category;
+          const exactMatch = categories.find(c => c.id === task.category);
+          if (!exactMatch) {
+            const fuzzyMatch = categories.find(c => c.name.toLowerCase() === task.category?.toLowerCase() || c.id.toLowerCase() === task.category?.toLowerCase());
+            if (fuzzyMatch) matchedCatId = fuzzyMatch.id;
+          }
+
+          setCategory(matchedCatId || (categories[0]?.id || 'Personal'));
           setDate(task.date);
           setNotes(task.notes || '');
         }

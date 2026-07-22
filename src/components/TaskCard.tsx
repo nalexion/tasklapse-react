@@ -13,7 +13,16 @@ interface TaskCardProps {
 export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCardProps) {
   const { categories } = useAppContext();
   
-  const categoryDef = categories.find(c => c.id === task.category);
+  let categoryDef = categories.find(c => c.id === task.category);
+  
+  if (!categoryDef) {
+    // Fallback: Try to match by name or case-insensitive ID to support legacy or malformed records
+    categoryDef = categories.find(c => 
+      c.name.toLowerCase() === task.category?.toLowerCase() || 
+      c.id.toLowerCase() === task.category?.toLowerCase()
+    );
+  }
+
   const categoryColor = categoryDef?.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   const categoryName = categoryDef?.name || task.category || 'Personal';
   const categoryIcon = categoryDef?.icon || 'Circle';
