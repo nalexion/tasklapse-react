@@ -29,7 +29,7 @@ interface AppContextType {
   deleteTask: (id: string) => Promise<void>;
   archiveTask: (id: string) => Promise<void>;
   unarchiveTask: (id: string) => Promise<void>;
-  saveWebhook: (url: string, secret?: string) => Promise<void>;
+  saveWebhook: (url: string, targetEmail?: string, secret?: string) => Promise<void>;
   saveCategories: (newCategories: CategoryDef[]) => Promise<void>;
   updateTelemetry: (status: string) => Promise<void>;
 }
@@ -239,18 +239,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await updateTask(id, { archived: false });
   }, [updateTask]);
 
-  const saveWebhook = useCallback(async (url: string, secret?: string) => {
+  const saveWebhook = useCallback(async (url: string, targetEmail?: string, secret?: string) => {
     if (isGuest) {
       return;
     }
     if (user) {
       const currentSecret = secret !== undefined ? secret : webhook.secret;
-      const newWebhook = { url, secret: currentSecret || '', lastStatus: "Updated", lastTime: new Date().toLocaleString() };
+      const currentEmail = targetEmail !== undefined ? targetEmail : webhook.targetEmail;
+      const newWebhook = { url, targetEmail: currentEmail, secret: currentSecret || '', lastStatus: "Updated", lastTime: new Date().toLocaleString() };
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
       await setDoc(ref, newWebhook, { merge: true });
       setWebhook(prev => ({ ...prev, ...newWebhook }));
     }
-  }, [isGuest, user, webhook.secret]);
+  }, [isGuest, user, webhook.secret, webhook.targetEmail]);
 
   const saveCategories = useCallback(async (newCategories: CategoryDef[]) => {
     setCategories(newCategories);

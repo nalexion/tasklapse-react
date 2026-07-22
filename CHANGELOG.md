@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.9.1
+- **Settings Enhancements**: Re-introduced the Delivery Telemetry diagnostics log view in Settings which tracks dispatch status (`Success 200`, `Delivery Failed`, etc) exactly as in the Vanilla JS original.
+- **Form Separation**: Decoupled "Simulated Target Email" and "Incoming Webhook Endpoint" into separate configuration inputs within the settings panel.
+- **Backup & Migration**: Wired up the "Export Backup" and "Import Backup" operations enabling functional JSON data transfers and local overwriting for offline states.
+- **Payload Completeness**: Enriched the simulation alarm webhook POST payload in the Dashboard to map all requested target fields (`event`, `items`, `daysRemaining`, `expiryDate`, `notes`, `category`, `driverMode`, `user`, and `auth_secret`).
+
 ## v2.9.0
 - **Recurrence & Archive Engine**: Fully implemented the date-math logic for recurring items. When a recurring task is checked off, a historical clone is created in the Archive, while the active task automatically rolls its target expiry date forward according to its schedule (Weekly, Monthly, Quarterly, Yearly).
 - **Telemetry System & Outbound Webhooks**: Enabled full execution of the notification evaluation engine during a "Simulate Daily Alarm". The payload is securely dispatched via `fetch` POST to the configured webhook endpoint, with corresponding Delivery Telemetry logged in the Settings UI as `Success 200` or `Delivery Failed`.

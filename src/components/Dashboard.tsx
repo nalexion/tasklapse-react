@@ -86,6 +86,7 @@ export default function Dashboard() {
     };
 
     let activeTriggers = 0;
+    const triggeredItems: any[] = [];
     tasks.filter(t => !t.archived).forEach(task => {
       const daysLeft = calculateDaysLeft(task.date);
       let isTriggered = false;
@@ -103,23 +104,36 @@ export default function Dashboard() {
         isTriggered = true;
       }
 
-      if (isTriggered) activeTriggers++;
+      if (isTriggered) {
+        activeTriggers++;
+        triggeredItems.push({
+          item: task.name,
+          daysRemaining: daysLeft,
+          expiryDate: task.date,
+          notes: task.notes || "",
+          category: task.category || "Personal"
+        });
+      }
     });
 
     if (activeTriggers === 0) {
       alert("Alarm System Check\nAll active items are in healthy condition. No notification webhooks triggered today.");
     } else if (webhook?.url) {
       try {
+        const payload = { 
+          event: "tasklapse_alerts", 
+          items: triggeredItems,
+          driverMode: "cloud_sync",
+          user: webhook.targetEmail || "unknown",
+          auth_secret: webhook.secret || "none",
+          timestamp: new Date().toISOString()
+        };
         const response = await fetch(webhook.url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
-            event: "tasklapse_alerts", 
-            triggeredCount: activeTriggers,
-            timestamp: new Date().toISOString()
-          })
+          body: JSON.stringify(payload)
         });
         if (response.ok) {
           updateTelemetry("Success 200");

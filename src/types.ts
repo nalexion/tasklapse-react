@@ -18,6 +18,7 @@ export interface Task {
 
 export interface WebhookData {
   url: string;
+  targetEmail?: string;
   secret?: string;
   lastStatus: string;
   lastTime: string;
