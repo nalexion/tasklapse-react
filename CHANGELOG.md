@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.7.3
+- **Legacy Data Support**: Fixed category and due date mapping issues for existing users.
+- **Date Parsing Fix**: Improved date parsing logic to prevent timezone shifts that caused due dates to calculate incorrectly.
+- **Category Matching Fallback**: Added fuzzy matching for categories to support legacy records that used names instead of IDs.
+
 ## v2.7.2
 - **Dynamic Categories**: Transitioned from hardcoded, static categories to a fully user-configurable category management system.
 - **Category Iconography**: Added a wide set of icons using `lucide-react` for users to associate with their custom categories.

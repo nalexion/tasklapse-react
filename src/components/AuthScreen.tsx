@@ -49,7 +49,7 @@ export default function AuthScreen() {
             }}
           />
           <h2 className="text-3xl font-bold text-white mb-1 tracking-tight">
-            TaskLapse <span className="text-indigo-400 text-sm align-top">v2.7.2</span>
+            TaskLapse <span className="text-indigo-400 text-sm align-top">v2.7.3</span>
           </h2>
           <p className="text-slate-400 text-sm">Secure Cloud Expiration Tracker</p>
         </div>
