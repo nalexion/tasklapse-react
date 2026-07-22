@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
-import { ClipboardList, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { ClipboardList, AlertCircle, Clock, CheckCircle, Plus } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 interface StatsRowProps {
   categoryFilter?: string;
+  onOpenTaskModal: () => void;
 }
 
-export default function StatsRow({ categoryFilter }: StatsRowProps) {
+export default function StatsRow({ categoryFilter, onOpenTaskModal }: StatsRowProps) {
   const { tasks, searchQuery } = useAppContext();
 
   const calculateDaysLeft = (dateString: string) => {
@@ -53,7 +54,21 @@ export default function StatsRow({ categoryFilter }: StatsRowProps) {
   }, [activeTasks]);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      <button 
+        onClick={onOpenTaskModal}
+        className="glass-panel p-4 rounded-xl flex flex-col justify-center border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 hover:border-indigo-400 transition-all text-left group shadow-lg shadow-indigo-500/5 cursor-pointer"
+      >
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 shrink-0 rounded-lg bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 text-indigo-300 group-hover:scale-110 transition-transform shadow-inner">
+            <Plus className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col justify-center">
+            <p className="text-[10px] text-indigo-300/80 font-bold tracking-widest uppercase mb-1">Action</p>
+            <p className="text-xl font-bold text-white leading-none group-hover:text-indigo-200 transition-colors">Track New</p>
+          </div>
+        </div>
+      </button>
       <div className="glass-panel p-4 rounded-xl flex flex-col justify-center border-slate-700/50">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400">

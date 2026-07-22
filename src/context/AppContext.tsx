@@ -119,6 +119,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const loginAsGuest = useCallback(() => {
     setIsGuest(true);
     setUser(null);
+    setWebhook({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
     const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (localData) {
       try {
@@ -150,6 +151,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUser(null);
     setTasks([]);
     setCategories(DEFAULT_CATEGORIES);
+    setWebhook({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
   }, []);
 
   const addTask = useCallback(async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'archived'>) => {
@@ -201,7 +203,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const saveWebhook = useCallback(async (url: string, secret?: string) => {
     if (isGuest) {
-      alert("Settings require registration.");
       return;
     }
     if (user) {

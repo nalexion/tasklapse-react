@@ -10,11 +10,10 @@ export default function IntegrationPanel() {
   useEffect(() => {
     setUrl(webhook.url || '');
     setSecret(webhook.secret || '');
-  }, [webhook]);
+  }, [webhook.url, webhook.secret]);
 
   const handleSave = async () => {
     if (isGuest) {
-      alert("Settings require registration.");
       return;
     }
     await saveWebhook(url.trim(), secret.trim());
@@ -102,8 +101,16 @@ export default function IntegrationPanel() {
 
         <div className="pt-6 flex justify-between items-center mt-4">
           <span className="text-sm text-indigo-400 font-medium">Status: Firestore live synchronization active</span>
-          <button onClick={handleSave} className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-md transition-colors">
-            Save Settings
+          <button 
+            onClick={handleSave} 
+            disabled={isGuest}
+            className={`px-6 py-2 text-sm font-bold rounded-lg shadow-md transition-colors ${
+              isGuest 
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+          >
+            {isGuest ? 'Requires Account' : 'Save Settings'}
           </button>
         </div>
       </div>

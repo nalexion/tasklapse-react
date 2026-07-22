@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.7.10
+- **Category Filter Drag-to-Scroll**: Implemented drag-to-scroll (mouse down and drag) functionality on the category filter bar for easier horizontal navigation without requiring a trackpad or scroll wheel.
+- **Track New Item Relocation**: Re-styled and moved the "Track New Item" action button into the Global Stats Row as the primary action card, removing it from the category filter bar to completely eliminate overlap issues.
+- **Category Overlap Fix**: Removed the trailing button from the category filters container, allowing the categories list to utilize the full horizontal space securely.
+
+## v2.7.9
+- **Button Swapped**: Swapped the "Track New Item" button with the "Simulate Daily Alarm" button to prioritize frequent actions and refine the header layout.
+- **Category Filter Scrolling**: Finalized the flexbox constraints (`min-w-0` and `shrink-0`) to ensure the category filter bar scrolls horizontally without overlapping or pushing action buttons off-screen.
+- **Webhook State Reloading**: Fixed the React effect dependencies to correctly synchronize webhook credentials when switching between connected accounts, ensuring the Integration Panel loads existing secrets properly upon login.
+
 ## v2.7.8
 - **Category Filter Scrolling**: Updated the category filter bar container to flex-1 and min-w-0, preventing the "Simulate Alarm" button from overlapping category names while allowing full horizontal scrolling.
 - **Webhook State Loading**: Fixed a bug where webhook settings from existing connected accounts were overriding and dropping the authentication secret during partial updates.

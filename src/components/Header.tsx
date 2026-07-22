@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, PlusCircle, Archive, Settings, LogOut, Tags } from 'lucide-react';
+import { Search, PlusCircle, Archive, Settings, LogOut, Tags, Bell } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 interface HeaderProps {
@@ -7,9 +7,11 @@ interface HeaderProps {
   onOpenArchive: () => void;
   onOpenSettings: () => void;
   onOpenCategories: () => void;
+  onSimulateAlarm: () => void;
+  isSimulating: boolean;
 }
 
-export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings, onOpenCategories }: HeaderProps) {
+export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings, onOpenCategories, onSimulateAlarm, isSimulating }: HeaderProps) {
   const { user, isGuest, searchQuery, setSearchQuery, logout } = useAppContext();
 
   const userEmailTag = isGuest 
@@ -35,7 +37,7 @@ export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings,
             />
             <div>
               <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                TaskLapse <span className="text-slate-500 text-xs font-normal align-middle">v2.7.8</span>
+                TaskLapse <span className="text-slate-500 text-xs font-normal align-middle">v2.7.10</span>
                 <span className={syncBadgeClass}>{syncBadgeText}</span>
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-400">{userEmailTag}</p>
@@ -57,10 +59,12 @@ export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings,
             </div>
 
           <button 
-            onClick={onOpenTaskModal} 
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+            onClick={onSimulateAlarm}
+            disabled={isSimulating}
+            className="flex items-center space-x-2 bg-amber-500 hover:bg-amber-600 text-amber-950 px-3 sm:px-4 py-2 rounded-lg font-bold transition-colors text-sm shadow-[0_0_15px_rgba(245,158,11,0.2)] border border-amber-400 disabled:opacity-70 whitespace-nowrap"
           >
-            <PlusCircle className="w-5 h-5" /> <span className="hidden sm:inline">Track New Item</span>
+            <Bell className={`w-4 h-4 ${isSimulating ? 'animate-ping' : ''}`} />
+            <span className="hidden sm:inline">{isSimulating ? 'Simulating...' : 'Simulate Daily Alarm'}</span>
           </button>
           
           <button 

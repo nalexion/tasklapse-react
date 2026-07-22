@@ -30,6 +30,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   const [editName, setEditName] = useState('');
   const [editIcon, setEditIcon] = useState('👤');
   const [editColor, setEditColor] = useState(AVAILABLE_COLORS[0].class);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -71,8 +72,12 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Delete this category? Tasks using it will keep the category ID but may lose their color styling.')) {
+    if (deleteConfirmId === id) {
       await saveCategories(categories.filter(c => c.id !== id));
+      setDeleteConfirmId(null);
+    } else {
+      setDeleteConfirmId(id);
+      setTimeout(() => setDeleteConfirmId(null), 3000);
     }
   };
 
@@ -164,8 +169,16 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
                       <button onClick={() => handleEdit(cat)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(cat.id)} className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded" title="Delete">
-                        <Trash2 className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleDelete(cat.id)} 
+                        className={`p-1.5 rounded transition-colors ${
+                          deleteConfirmId === cat.id 
+                            ? 'text-white bg-red-600 hover:bg-red-700' 
+                            : 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
+                        }`}
+                        title={deleteConfirmId === cat.id ? "Confirm Delete?" : "Delete"}
+                      >
+                        {deleteConfirmId === cat.id ? <span className="text-xs font-bold px-1">?</span> : <Trash2 className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>

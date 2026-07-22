@@ -13,6 +13,8 @@ interface TaskCardProps {
 export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCardProps) {
   const { categories, deleteTask } = useAppContext();
   
+  const [isConfirmingDelete, setIsConfirmingDelete] = React.useState(false);
+
   let categoryDef = categories.find(c => c.id === task.category);
   
   if (!categoryDef) {
@@ -71,10 +73,21 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
           Edit
         </button>
         <button 
-          onClick={() => { if(confirm('Are you sure you want to delete this item?')) deleteTask(task.id); }} 
-          className="text-xs px-3 py-1.5 bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 rounded border border-rose-800/50"
+          onClick={() => {
+            if (isConfirmingDelete) {
+              deleteTask(task.id);
+            } else {
+              setIsConfirmingDelete(true);
+              setTimeout(() => setIsConfirmingDelete(false), 3000);
+            }
+          }} 
+          className={`text-xs px-3 py-1.5 rounded border transition-colors ${
+            isConfirmingDelete 
+              ? 'bg-red-600 hover:bg-red-700 text-white border-red-500' 
+              : 'bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 border-rose-800/50'
+          }`}
         >
-          Delete
+          {isConfirmingDelete ? 'Confirm?' : 'Delete'}
         </button>
         <button 
           onClick={() => onArchive(task.id)} 
