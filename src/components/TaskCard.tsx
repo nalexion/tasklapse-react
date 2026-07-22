@@ -39,11 +39,15 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
     urgencyClass = 'bg-red-900/30 border-red-500/50';
     textClass = 'text-red-400 font-bold';
     displayDaysLeft = `Expired (${Math.abs(numDaysLeft)}d ago)`;
-  } else if (numDaysLeft <= 14) {
+  } else if (numDaysLeft <= 1) {
     urgencyClass = 'bg-rose-900/20 border-rose-500/30';
-    textClass = 'text-rose-400';
+    textClass = 'text-rose-400 font-bold';
     displayDaysLeft = `${numDaysLeft}d left`;
-  } else if (numDaysLeft <= 45) {
+  } else if (numDaysLeft <= 7) {
+    urgencyClass = 'bg-slate-800 border-slate-700';
+    textClass = 'text-amber-400';
+    displayDaysLeft = `${numDaysLeft}d left`;
+  } else if (numDaysLeft <= 31) {
     textClass = 'text-amber-400';
     displayDaysLeft = `${numDaysLeft}d left`;
   } else {

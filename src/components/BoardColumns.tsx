@@ -53,8 +53,8 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
     const res = { days: [] as Task[], weeks: [] as Task[], months: [] as Task[] };
     activeTasks.forEach(t => {
       const dl = calculateDaysLeft(t.date);
-      if (dl <= 14) res.days.push(t);
-      else if (dl <= 45) res.weeks.push(t);
+      if (dl <= 7) res.days.push(t);
+      else if (dl <= 31) res.weeks.push(t);
       else res.months.push(t);
     });
     return res;

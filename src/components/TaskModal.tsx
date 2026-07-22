@@ -16,6 +16,8 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
   const [category, setCategory] = useState('');
   const [date, setDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [recurrence, setRecurrence] = useState('Does not repeat');
+  const [alerts, setAlerts] = useState({ thirtyDays: false, sevenDays: true, oneDay: true });
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -35,12 +37,20 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
           setCategory(matchedCatId || (categories[0]?.id || 'Personal'));
           setDate(task.date);
           setNotes(task.notes || '');
+          setRecurrence(task.recurrence || 'Does not repeat');
+          if (task.alerts) {
+            setAlerts(task.alerts);
+          } else {
+            setAlerts({ thirtyDays: false, sevenDays: true, oneDay: true });
+          }
         }
       } else {
         setName('');
         setCategory(categories[0]?.id || 'Personal');
         setDate('');
         setNotes('');
+        setRecurrence('Does not repeat');
+        setAlerts({ thirtyDays: false, sevenDays: true, oneDay: true });
       }
       setError('');
     }
@@ -63,9 +73,9 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
 
     try {
       if (taskIdToEdit) {
-        await updateTask(taskIdToEdit, { name: trimmedName, date, category, notes: notes.trim() });
+        await updateTask(taskIdToEdit, { name: trimmedName, date, category, notes: notes.trim(), recurrence, alerts });
       } else {
-        await addTask({ name: trimmedName, date, category, notes: notes.trim() });
+        await addTask({ name: trimmedName, date, category, notes: notes.trim(), recurrence, alerts });
       }
       onClose();
     } catch (err: any) {
@@ -89,7 +99,7 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Item Name</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Item / Task Name <span className="text-red-400">*</span></label>
             <input 
               type="text" 
               required 
@@ -100,30 +110,81 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
               placeholder="e.g., Driver's License" 
             />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Category <span className="text-red-400">*</span></label>
+              <select 
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none"
+              >
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Target Expiry Date <span className="text-red-400">*</span></label>
+              <input 
+                type="date" 
+                required 
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none [color-scheme:dark]" 
+              />
+            </div>
+          </div>
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Category</label>
-            <select 
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none"
+            <label className="block text-sm font-medium text-slate-300 mb-1">Does this repeat / recur?</label>
+            <select
+              value={recurrence}
+              onChange={e => setRecurrence(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none mb-1"
             >
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
+              <option value="Does not repeat">Does not repeat</option>
+              <option value="Every 1 Month">Every 1 Month</option>
+              <option value="Every 3 Months">Every 3 Months</option>
+              <option value="Every 6 Months">Every 6 Months</option>
+              <option value="Every 1 Year">Every 1 Year</option>
             </select>
+            <p className="text-xs text-slate-500">Once complete, document archives into history.</p>
           </div>
+          
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Expiration / Due Date</label>
-            <input 
-              type="date" 
-              required 
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none [color-scheme:dark]" 
-            />
+            <label className="block text-sm font-bold text-white mb-2">When should we email you alerts?</label>
+            <div className="flex items-center gap-6 bg-slate-900/50 p-3 rounded-lg border border-slate-800">
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+                <input 
+                  type="checkbox" 
+                  checked={alerts.thirtyDays} 
+                  onChange={e => setAlerts(prev => ({ ...prev, thirtyDays: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500" 
+                />
+                30d out
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+                <input 
+                  type="checkbox" 
+                  checked={alerts.sevenDays} 
+                  onChange={e => setAlerts(prev => ({ ...prev, sevenDays: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500" 
+                />
+                7d out
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300">
+                <input 
+                  type="checkbox" 
+                  checked={alerts.oneDay} 
+                  onChange={e => setAlerts(prev => ({ ...prev, oneDay: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-indigo-500 focus:ring-indigo-500" 
+                />
+                1 day or less
+              </label>
+            </div>
           </div>
+
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Notes (Optional)</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Details / Notes</label>
             <textarea 
               rows={2} 
               value={notes}

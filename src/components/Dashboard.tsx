@@ -77,10 +77,48 @@ export default function Dashboard() {
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsSimulating(false);
     
+    const calculateDaysLeft = (dateString: string) => {
+      if (!dateString) return 0;
+      const parts = dateString.split('-');
+      if (parts.length === 3) {
+        const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        const now = new Date();
+        due.setHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
+        return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      }
+      const due = new Date(dateString);
+      const now = new Date();
+      due.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    let activeTriggers = 0;
+    tasks.filter(t => !t.archived).forEach(task => {
+      const daysLeft = calculateDaysLeft(task.date);
+      let isTriggered = false;
+      
+      // Default fallback if alerts are missing for backward compatibility
+      const alerts = task.alerts || { thirtyDays: false, sevenDays: true, oneDay: true };
+
+      if (daysLeft === 0) {
+        isTriggered = true; // Trigger on the exact day of expiry
+      } else if (daysLeft === 1 && alerts.oneDay) {
+        isTriggered = true;
+      } else if (daysLeft === 7 && alerts.sevenDays) {
+        isTriggered = true;
+      } else if (daysLeft === 30 && alerts.thirtyDays) {
+        isTriggered = true;
+      }
+
+      if (isTriggered) activeTriggers++;
+    });
+
     if (webhook?.url) {
-      alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}`);
+      alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}\n\n${activeTriggers} items matched alert criteria.`);
     } else {
-      alert(`Simulation completed. No target email or webhook is configured in Settings.`);
+      alert(`Simulation completed. No target email or webhook is configured in Settings.\n\n${activeTriggers} items would have triggered an alert.`);
     }
   };
 

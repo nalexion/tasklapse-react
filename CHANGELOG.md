@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.7.13
+- **Urgency Columns**: Refined the visual grouping boundaries: "Due In Days" now strictly bounds items `<= 7` days, while "Due In Weeks" correctly bounds items `<= 31` days. This resolves column mismatches for 8-day items.
+- **Alarm Accuracy**: Changed the simulated email trigger logic to fire on *exact* threshold days (exactly 30 days, 7 days, 1 day, or 0 days left) rather than indiscriminately firing on every intervening day.
+
+## v2.7.12
+- **Urgency Color Coding Fix**: Adjusted the color coding logic in the task cards so that only items due in 1 day or less (or expired) appear in red. Items due in 2-14 days now correctly display in amber.
+- **Alarm Simulation Logic**: Restored the original notification evaluation logic to the Simulate Alarm function, ensuring it correctly counts triggered alerts based on each task's custom 30d/7d/1d alert thresholds.
+
+## v2.7.11
+- **Recurring Tasks**: Re-added the "Does this repeat / recur?" dropdown option in the track item modal.
+- **Alert Preferences**: Restored the "When should we email you alerts?" section with multi-select checkboxes for 30d, 7d, and 1-day threshold configurations.
+
 ## v2.7.10
 - **Category Filter Drag-to-Scroll**: Implemented drag-to-scroll (mouse down and drag) functionality on the category filter bar for easier horizontal navigation without requiring a trackpad or scroll wheel.
 - **Track New Item Relocation**: Re-styled and moved the "Track New Item" action button into the Global Stats Row as the primary action card, removing it from the category filter bar to completely eliminate overlap issues.

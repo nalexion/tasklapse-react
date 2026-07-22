@@ -4,6 +4,12 @@ export interface Task {
   date: string;
   category: string;
   notes: string;
+  recurrence?: string;
+  alerts?: {
+    thirtyDays: boolean;
+    sevenDays: boolean;
+    oneDay: boolean;
+  };
   archived: boolean;
   archivedAt?: string;
   createdAt: string;
