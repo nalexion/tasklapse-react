@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.14
+- **Archive Modal Details**: Restored the expanded details layout in the Completed History & Archives modal, displaying category badges, original expiry dates, detailed notes, and the styled "Delete Record" action exactly as shown in the original SPA.
+
 ## v2.7.13
 - **Urgency Columns**: Refined the visual grouping boundaries: "Due In Days" now strictly bounds items `<= 7` days, while "Due In Weeks" correctly bounds items `<= 31` days. This resolves column mismatches for 8-day items.
 - **Alarm Accuracy**: Changed the simulated email trigger logic to fire on *exact* threshold days (exactly 30 days, 7 days, 1 day, or 0 days left) rather than indiscriminately firing on every intervening day.
