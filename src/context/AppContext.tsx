@@ -262,12 +262,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isGuest, user]);
 
   const updateTelemetry = useCallback(async (status: string) => {
-    if (isGuest || !user) return;
     const time = new Date().toLocaleString();
     const updates = { lastStatus: status, lastTime: time };
-    const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
-    await setDoc(ref, updates, { merge: true });
     setWebhook(prev => ({ ...prev, ...updates }));
+    if (!isGuest && user) {
+      const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
+      await setDoc(ref, updates, { merge: true });
+    }
   }, [isGuest, user]);
 
   return (

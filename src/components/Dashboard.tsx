@@ -12,7 +12,7 @@ import { Bell, Plus } from 'lucide-react';
 import { resolveIcon } from '../utils';
 
 export default function Dashboard() {
-  const { tasks, categories, webhook, updateTelemetry } = useAppContext();
+  const { tasks, categories, webhook, updateTelemetry, isGuest } = useAppContext();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -120,27 +120,45 @@ export default function Dashboard() {
       alert("Alarm System Check\nAll active items are in healthy condition. No notification webhooks triggered today.");
     } else if (webhook?.url) {
       try {
-        const payload = { 
-          event: "tasklapse_alerts", 
-          items: triggeredItems,
-          driverMode: "cloud_sync",
-          user: webhook.targetEmail || "unknown",
-          auth_secret: webhook.secret || "none",
-          timestamp: new Date().toISOString()
-        };
-        const response = await fetch(webhook.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
-        });
-        if (response.ok) {
+        let successCount = 0;
+        let lastStatus = 200;
+        
+        for (const item of triggeredItems) {
+          const payload = { 
+            event: "tasklapse_alerts", 
+            item: item.item,
+            daysRemaining: item.daysRemaining,
+            expiryDate: item.expiryDate,
+            notes: item.notes,
+            category: item.category,
+            driverMode: isGuest ? "local_storage" : "cloud_sync",
+            user: webhook.targetEmail || "unknown",
+            auth_secret: webhook.secret || "none",
+            timestamp: new Date().toISOString()
+          };
+          
+          const response = await fetch(webhook.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            lastStatus = response.status;
+          }
+        }
+
+        if (successCount === activeTriggers) {
           updateTelemetry("Success 200");
           alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}\n\n${activeTriggers} items matched alert criteria.`);
+        } else if (successCount > 0) {
+          updateTelemetry("Partial Delivery");
+          alert(`Simulation partially delivered. ${successCount}/${activeTriggers} items sent successfully.`);
         } else {
           updateTelemetry("Delivery Failed");
-          alert(`Simulation failed to deliver to target webhook: HTTP ${response.status}`);
+          alert(`Simulation failed to deliver to target webhook: HTTP ${lastStatus}`);
         }
       } catch (err) {
         updateTelemetry("Delivery Error");

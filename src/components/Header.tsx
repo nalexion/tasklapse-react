@@ -37,7 +37,7 @@ export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings,
             />
             <div>
               <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                TaskLapse <span className="text-slate-500 text-xs font-normal align-middle">v2.9.1</span>
+                TaskLapse <span className="text-slate-500 text-xs font-normal align-middle">v2.9.2</span>
                 <span className={syncBadgeClass}>{syncBadgeText}</span>
               </h1>
               <p className="text-[10px] sm:text-xs text-slate-400">{userEmailTag}</p>

@@ -52,7 +52,9 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
+    document.body.appendChild(linkElement);
     linkElement.click();
+    document.body.removeChild(linkElement);
   };
 
   const handleImportClick = () => {

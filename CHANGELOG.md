@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.9.2
+- **Webhook Payload Mapping**: Restructured the daily alarm simulation to dispatch individual webhooks per active item, flattening the requested parameters (`event`, `item`, `daysRemaining`, `expiryDate`, `notes`, `category`, `driverMode`, `user`, `auth_secret`) directly to the root for Make.com / Zapier parsing compatibility.
+- **Delivery Telemetry State**: Fixed an issue where the React `useContext` was failing to persist the dispatch log status due to an early `isGuest` return break in the payload sequence.
+- **Export Backup Patch**: Resolved a browser security restriction that blocked the programmatic downloading of the JSON backup file by ensuring the link node is temporarily appended to the DOM body.
+
 ## v2.9.1
 - **Settings Enhancements**: Re-introduced the Delivery Telemetry diagnostics log view in Settings which tracks dispatch status (`Success 200`, `Delivery Failed`, etc) exactly as in the Vanilla JS original.
 - **Form Separation**: Decoupled "Simulated Target Email" and "Incoming Webhook Endpoint" into separate configuration inputs within the settings panel.
