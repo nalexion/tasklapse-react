@@ -11,7 +11,7 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCardProps) {
-  const { categories } = useAppContext();
+  const { categories, deleteTask } = useAppContext();
   
   let categoryDef = categories.find(c => c.id === task.category);
   
@@ -69,6 +69,12 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
           className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded"
         >
           Edit
+        </button>
+        <button 
+          onClick={() => { if(confirm('Are you sure you want to delete this item?')) deleteTask(task.id); }} 
+          className="text-xs px-3 py-1.5 bg-rose-900/40 hover:bg-rose-900/60 text-rose-300 rounded border border-rose-800/50"
+        >
+          Delete
         </button>
         <button 
           onClick={() => onArchive(task.id)} 

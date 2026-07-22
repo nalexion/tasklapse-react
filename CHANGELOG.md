@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.7.8
+- **Category Filter Scrolling**: Updated the category filter bar container to flex-1 and min-w-0, preventing the "Simulate Alarm" button from overlapping category names while allowing full horizontal scrolling.
+- **Webhook State Loading**: Fixed a bug where webhook settings from existing connected accounts were overriding and dropping the authentication secret during partial updates.
+
+## v2.7.7
+- **UI Architecture Refinements**: Reintroduced the Global Stats Row directly below the Header to display 'Total Tracked', 'Due in Days', 'Due in Weeks', and 'Due in Months' tracking metrics at a glance.
+- **Empty States**: Added a clean dashed-border empty state UI for columns when no items are currently due to improve structural layout stability.
+- **Action Management**: Re-added a robust `Delete` action directly to task cards to enhance item management functionality.
+- **Badge Styling**: Updated the Global Cloud Sync badge indicator to reflect a success (Emerald) styling to align with original SPA layout.
+
 ## v2.7.6
 - **Missing Integrations Panel**: Restored the "Triggered Email Notifications" and "Cloud Notification Integrations" UI panels to the bottom of the main dashboard as they were in the original SPA.
 - **Webhook Authentication**: Added the Webhook Authentication Secret field to the integrations panel.

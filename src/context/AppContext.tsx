@@ -199,18 +199,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     await updateTask(id, { archived: false });
   }, [updateTask]);
 
-  const saveWebhook = useCallback(async (url: string) => {
+  const saveWebhook = useCallback(async (url: string, secret?: string) => {
     if (isGuest) {
       alert("Settings require registration.");
       return;
     }
     if (user) {
-      const newWebhook = { url, lastStatus: "Updated", lastTime: new Date().toLocaleString() };
+      const currentSecret = secret !== undefined ? secret : webhook.secret;
+      const newWebhook = { url, secret: currentSecret || '', lastStatus: "Updated", lastTime: new Date().toLocaleString() };
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
       await setDoc(ref, newWebhook, { merge: true });
-      setWebhook(newWebhook);
+      setWebhook(prev => ({ ...prev, ...newWebhook }));
     }
-  }, [isGuest, user]);
+  }, [isGuest, user, webhook.secret]);
 
   const saveCategories = useCallback(async (newCategories: CategoryDef[]) => {
     setCategories(newCategories);

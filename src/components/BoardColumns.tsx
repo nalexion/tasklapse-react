@@ -61,50 +61,8 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
   }, [activeTasks]);
 
   return (
-    <>
-      {/* STATS ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="glass-panel p-4 rounded-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <ClipboardList className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">Total Tracked</p>
-            <p className="text-2xl font-bold text-white">{activeTasks.length}</p>
-          </div>
-        </div>
-        <div className="glass-panel p-4 rounded-xl flex items-center gap-4 border-rose-500/30">
-          <div className="w-12 h-12 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400">
-            <AlertCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">Due in Days</p>
-            <p className="text-2xl font-bold text-rose-400">{days.length}</p>
-          </div>
-        </div>
-        <div className="glass-panel p-4 rounded-xl flex items-center gap-4 border-amber-500/30">
-          <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">Due in Weeks</p>
-            <p className="text-2xl font-bold text-amber-400">{weeks.length}</p>
-          </div>
-        </div>
-        <div className="glass-panel p-4 rounded-xl flex items-center gap-4 border-emerald-500/30">
-          <div className="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium tracking-wider uppercase">Due in Months</p>
-            <p className="text-2xl font-bold text-emerald-400">{months.length}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* BOARD COLUMNS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-        {/* Days Column */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start mt-6">
+      {/* Days Column */}
         <div className="glass-panel rounded-xl flex flex-col h-full min-h-[500px]">
           <div className="p-4 border-b border-slate-700/50 flex justify-between items-center bg-slate-800/30 rounded-t-xl">
             <h3 className="font-bold text-rose-400 flex items-center gap-2">
@@ -113,7 +71,13 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
             <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">{days.length} Items</span>
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {days.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)}
+            {days.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center m-2 border-2 border-dashed border-slate-700/50 rounded-xl min-h-[400px] text-slate-500">
+                <span className="text-sm font-medium">No items due</span>
+              </div>
+            ) : (
+              days.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)
+            )}
           </div>
         </div>
 
@@ -126,7 +90,13 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
             <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">{weeks.length} Items</span>
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {weeks.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)}
+            {weeks.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center m-2 border-2 border-dashed border-slate-700/50 rounded-xl min-h-[400px] text-slate-500">
+                <span className="text-sm font-medium">No items due</span>
+              </div>
+            ) : (
+              weeks.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)
+            )}
           </div>
         </div>
 
@@ -139,10 +109,15 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
             <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">{months.length} Items</span>
           </div>
           <div className="p-4 flex-1 overflow-y-auto space-y-3">
-            {months.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)}
+            {months.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center m-2 border-2 border-dashed border-slate-700/50 rounded-xl min-h-[400px] text-slate-500">
+                <span className="text-sm font-medium">No items due</span>
+              </div>
+            ) : (
+              months.map(t => <TaskCard key={t.id} task={t} daysLeft={calculateDaysLeft(t.date)} onEdit={onEditTask} onArchive={archiveTask} />)
+            )}
           </div>
         </div>
       </div>
-    </>
   );
 }
