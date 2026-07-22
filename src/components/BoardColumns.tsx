@@ -31,20 +31,9 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
 
   const calculateDaysLeft = (dateString: string) => {
     if (!dateString) return 0;
-    
-    // Fix for timezone-shifted dates: parse YYYY-MM-DD manually
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const now = new Date();
-      due.setHours(0, 0, 0, 0);
-      now.setHours(0, 0, 0, 0);
-      return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    }
-
-    const due = new Date(dateString);
+    const due = new Date(dateString); 
     const now = new Date();
-    due.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0); 
     now.setHours(0, 0, 0, 0);
     return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };

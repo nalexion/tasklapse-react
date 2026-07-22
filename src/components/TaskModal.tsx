@@ -142,10 +142,12 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none mb-1"
             >
               <option value="Does not repeat">Does not repeat</option>
+              <option value="Every Week">Every Week</option>
               <option value="Every 1 Month">Every 1 Month</option>
               <option value="Every 3 Months">Every 3 Months</option>
               <option value="Every 6 Months">Every 6 Months</option>
               <option value="Every 1 Year">Every 1 Year</option>
+              <option value="Every 2 Years">Every 2 Years</option>
             </select>
             <p className="text-xs text-slate-500">Once complete, document archives into history.</p>
           </div>

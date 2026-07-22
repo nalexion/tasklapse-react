@@ -12,7 +12,7 @@ import { Bell, Plus } from 'lucide-react';
 import { resolveIcon } from '../utils';
 
 export default function Dashboard() {
-  const { categories, webhook } = useAppContext();
+  const { tasks, categories, webhook } = useAppContext();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -78,18 +78,9 @@ export default function Dashboard() {
     setIsSimulating(false);
     
     const calculateDaysLeft = (dateString: string) => {
-      if (!dateString) return 0;
-      const parts = dateString.split('-');
-      if (parts.length === 3) {
-        const due = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-        const now = new Date();
-        due.setHours(0, 0, 0, 0);
-        now.setHours(0, 0, 0, 0);
-        return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      }
-      const due = new Date(dateString);
+      const due = new Date(dateString); 
       const now = new Date();
-      due.setHours(0, 0, 0, 0);
+      due.setHours(0, 0, 0, 0); 
       now.setHours(0, 0, 0, 0);
       return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
     };
@@ -115,7 +106,9 @@ export default function Dashboard() {
       if (isTriggered) activeTriggers++;
     });
 
-    if (webhook?.url) {
+    if (activeTriggers === 0) {
+      alert("Alarm System Check\nAll active items are in healthy condition. No notification webhooks triggered today.");
+    } else if (webhook?.url) {
       alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}\n\n${activeTriggers} items matched alert criteria.`);
     } else {
       alert(`Simulation completed. No target email or webhook is configured in Settings.\n\n${activeTriggers} items would have triggered an alert.`);

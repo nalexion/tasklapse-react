@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.8.1
+- **Bug Fix**: Addressed a runtime issue where `tasks` was improperly scoped in the Dashboard rendering logic.
+
+## v2.8.0
+- **Daily Alarm Simulation**: Restored the original healthy condition notification message ("Alarm System Check: All active items are in healthy condition...") when no alerts are triggered during simulation.
+- **Date Handling Accuracy**: Reverted the `calculateDaysLeft` time parser to perfectly match the original SPA's exact time evaluation logic, resolving the bug where selecting "today" in the calendar displayed an incorrect offset.
+- **Recurrence Settings**: Added missing "Every Week" and "Every 2 Years" options to the recurrence dropdown selector.
+
 ## v2.7.14
 - **Archive Modal Details**: Restored the expanded details layout in the Completed History & Archives modal, displaying category badges, original expiry dates, detailed notes, and the styled "Delete Record" action exactly as shown in the original SPA.
 
