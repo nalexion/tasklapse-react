@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Settings, X, Plus, Trash2, Edit2, Tag } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { CategoryDef } from '../types';
-import { AVAILABLE_ICONS, CategoryIcon } from './IconResolver';
+import { resolveIcon } from '../utils';
 
 interface CategoriesModalProps {
   isOpen: boolean;
@@ -22,11 +22,13 @@ const AVAILABLE_COLORS = [
   { id: 'pink', class: 'bg-pink-500/20 text-pink-300 border-pink-500/30', label: 'Pink' },
 ];
 
+const AVAILABLE_EMOJIS = ['👤', '🏠', '❤️', '🚗', '💳', '💼', '🛒', '🐾', '🌴', '🎓', '📚', '🎁', '💡', '🎮', '🛠️', '💸'];
+
 export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProps) {
   const { categories, saveCategories } = useAppContext();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editIcon, setEditIcon] = useState('User');
+  const [editIcon, setEditIcon] = useState('👤');
   const [editColor, setEditColor] = useState(AVAILABLE_COLORS[0].class);
 
   if (!isOpen) return null;
@@ -41,7 +43,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   const handleAddNew = () => {
     setEditingId('new');
     setEditName('');
-    setEditIcon('Tag');
+    setEditIcon('👤');
     setEditColor(AVAILABLE_COLORS[0].class);
   };
 
@@ -120,16 +122,15 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Icon</label>
-                <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto p-2 bg-slate-900 border border-slate-700 rounded-lg">
-                  {AVAILABLE_ICONS.map(iconName => (
+                <div className="grid grid-cols-8 gap-2 max-h-32 overflow-y-auto p-2 bg-slate-900 border border-slate-700 rounded-lg">
+                  {AVAILABLE_EMOJIS.map(emoji => (
                     <button
-                      key={iconName}
+                      key={emoji}
                       type="button"
-                      onClick={() => setEditIcon(iconName)}
-                      className={`p-2 flex items-center justify-center rounded-lg transition-colors ${editIcon === iconName ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                      title={iconName}
+                      onClick={() => setEditIcon(emoji)}
+                      className={`p-2 flex items-center justify-center rounded-lg transition-colors ${editIcon === emoji ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800'}`}
                     >
-                      <CategoryIcon name={iconName} className="w-5 h-5" />
+                      <span className="text-xl">{emoji}</span>
                     </button>
                   ))}
                 </div>
@@ -155,10 +156,9 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
                 {categories.map(cat => (
                   <div key={cat.id} className="bg-slate-800/50 border border-slate-700 p-3 rounded-lg flex justify-between items-center group">
                     <div className="flex items-center gap-3">
-                      <div className={`p-1.5 rounded border ${cat.color}`}>
-                        <CategoryIcon name={cat.icon} className="w-4 h-4" />
+                      <div className={`px-2 py-1 rounded border ${cat.color} flex items-center gap-2 font-medium`}>
+                        <span>{resolveIcon(cat.icon)}</span> {cat.name}
                       </div>
-                      <span className="text-white font-medium">{cat.name}</span>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleEdit(cat)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded" title="Edit">

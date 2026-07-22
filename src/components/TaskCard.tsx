@@ -1,7 +1,7 @@
 import React from 'react';
 import { Task } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { CategoryIcon } from './IconResolver';
+import { resolveIcon } from '../utils';
 
 interface TaskCardProps {
   task: Task;
@@ -25,7 +25,7 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
 
   const categoryColor = categoryDef?.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   const categoryName = categoryDef?.name || task.category || 'Personal';
-  const categoryIcon = categoryDef?.icon || 'Circle';
+  const categoryIcon = categoryDef?.icon || '⚪';
 
   let urgencyClass = 'bg-slate-800 border-slate-700';
   let textClass = 'text-slate-300';
@@ -53,7 +53,7 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
     <div className={`${urgencyClass} border rounded-xl p-4 transition-all hover:border-slate-500 group relative`}>
       <div className="flex justify-between items-start mb-2">
         <span className={`text-[10px] px-2 py-0.5 rounded border flex items-center gap-1 ${categoryColor} font-medium`}>
-          <CategoryIcon name={categoryIcon} className="w-3 h-3" /> {categoryName}
+          <span>{resolveIcon(categoryIcon)}</span> {categoryName}
         </span>
         <span className={`text-xs ${textClass} bg-slate-900/50 px-2 py-1 rounded`}>
           {displayDaysLeft}

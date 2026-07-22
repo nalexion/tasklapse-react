@@ -5,12 +5,12 @@ import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteD
 import { Task, WebhookData, CategoryDef } from '../types';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
-  { id: 'Personal', name: 'Personal', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: 'User' },
-  { id: 'Household', name: 'Household', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30', icon: 'Home' },
-  { id: 'Health', name: 'Health / Medical', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: 'Heart' },
-  { id: 'Auto', name: 'Auto / Moto', color: 'bg-slate-500/20 text-slate-300 border-slate-500/30', icon: 'Car' },
-  { id: 'Subscriptions', name: 'Subscriptions', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', icon: 'Repeat' },
-  { id: 'Work', name: 'Work / Business', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: 'Briefcase' }
+  { id: 'Personal', name: 'Personal', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: '👤' },
+  { id: 'Household', name: 'Household', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30', icon: '🏠' },
+  { id: 'Health', name: 'Health / Medical', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30', icon: '❤️' },
+  { id: 'Auto', name: 'Auto / Moto', color: 'bg-slate-500/20 text-slate-300 border-slate-500/30', icon: '🚗' },
+  { id: 'Subscriptions', name: 'Subscriptions', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', icon: '💳' },
+  { id: 'Work', name: 'Work / Business', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: '💼' }
 ];
 
 interface AppContextType {
@@ -29,7 +29,7 @@ interface AppContextType {
   deleteTask: (id: string) => Promise<void>;
   archiveTask: (id: string) => Promise<void>;
   unarchiveTask: (id: string) => Promise<void>;
-  saveWebhook: (url: string) => Promise<void>;
+  saveWebhook: (url: string, secret?: string) => Promise<void>;
   saveCategories: (newCategories: CategoryDef[]) => Promise<void>;
 }
 
@@ -44,7 +44,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isGuest, setIsGuest] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<CategoryDef[]>(DEFAULT_CATEGORIES);
-  const [webhook, setWebhook] = useState<WebhookData>({ url: '', lastStatus: 'None', lastTime: '--' });
+  const [webhook, setWebhook] = useState<WebhookData>({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 

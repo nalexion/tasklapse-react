@@ -29,16 +29,13 @@ export default function Header({ onOpenTaskModal, onOpenArchive, onOpenSettings,
         {/* Left: Logo & Branding */}
         <div className="flex items-center space-x-3">
           <img 
-            src="/logo.png" 
+            src="/logo.svg" 
             alt="TaskLapse Logo" 
             className="w-10 h-10 object-cover rounded-xl shadow-lg border border-slate-700" 
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFWMjkyRSIgcng9IjIwIi8+PHBhdGggZD0iTTMwIDUwbDE1IDE1IDMwLTMwIiBmaWxsPSJub25lIiBzdHJva2U9IiM4MTg0RkYiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
-            }}
           />
           <div>
             <h1 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-              TaskLapse <span className="text-indigo-400 text-xs font-normal align-middle">v2.7.3</span>
+              TaskLapse <span className="text-indigo-400 text-xs font-normal align-middle">v2.7.6</span>
               <span className={syncBadgeClass}>{syncBadgeText}</span>
             </h1>
             <p className="text-[10px] sm:text-xs text-slate-400">{userEmailTag}</p>

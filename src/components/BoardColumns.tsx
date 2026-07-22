@@ -6,13 +6,19 @@ import { Task } from '../types';
 
 interface BoardColumnsProps {
   onEditTask: (id: string) => void;
+  categoryFilter?: string;
 }
 
-export default function BoardColumns({ onEditTask }: BoardColumnsProps) {
+export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumnsProps) {
   const { tasks, searchQuery, archiveTask } = useAppContext();
 
   const activeTasks = useMemo(() => {
     let active = tasks.filter(t => !t.archived);
+    
+    if (categoryFilter && categoryFilter !== 'All') {
+      active = active.filter(t => t.category === categoryFilter);
+    }
+    
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       active = active.filter(t => 
@@ -21,7 +27,7 @@ export default function BoardColumns({ onEditTask }: BoardColumnsProps) {
       );
     }
     return active.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [tasks, searchQuery]);
+  }, [tasks, searchQuery, categoryFilter]);
 
   const calculateDaysLeft = (dateString: string) => {
     if (!dateString) return 0;

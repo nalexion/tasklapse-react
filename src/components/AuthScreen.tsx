@@ -41,15 +41,12 @@ export default function AuthScreen() {
       <div className="max-w-md w-full glass-panel rounded-2xl p-8 shadow-2xl relative overflow-hidden">
         <div className="text-center mb-8">
           <img 
-            src="/logo.png" 
+            src="/logo.svg" 
             alt="TaskLapse Logo" 
-            className="w-20 h-20 mx-auto object-cover rounded-xl shadow-lg border border-slate-700 mb-4"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzFWMjkyRSIgcng9IjIwIi8+PHBhdGggZD0iTTMwIDUwbDE1IDE1IDMwLTMwIiBmaWxsPSJub25lIiBzdHJva2U9IiM4MTg0RkYiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==';
-            }}
+            className="w-20 h-20 mx-auto object-cover rounded-2xl shadow-lg border border-slate-700 mb-4"
           />
           <h2 className="text-3xl font-bold text-white mb-1 tracking-tight">
-            TaskLapse <span className="text-indigo-400 text-sm align-top">v2.7.3</span>
+            TaskLapse <span className="text-indigo-400 text-sm align-top">v2.7.6</span>
           </h2>
           <p className="text-slate-400 text-sm">Secure Cloud Expiration Tracker</p>
         </div>

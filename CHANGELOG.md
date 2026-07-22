@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.7.6
+- **Missing Integrations Panel**: Restored the "Triggered Email Notifications" and "Cloud Notification Integrations" UI panels to the bottom of the main dashboard as they were in the original SPA.
+- **Webhook Authentication**: Added the Webhook Authentication Secret field to the integrations panel.
+- **Dashboard Layout Fix**: Adjusted the category filter bar layout to ensure the "Simulate Daily Alarm Check" button aligns properly horizontally on one line, with hidden scrollbars for the category overflow.
+- **Brand Assets**: Restored the original TaskLapse SVG logo and favicon to the application.
+
+## v2.7.5
+- **Icon Resolution Fallback**: Implemented a fallback mechanism to correctly display emojis for users with legacy icon text strings saved in their local storage or database, ensuring that icons are visibly correctly instead of as text.
+- **Dashboard Layout Polish**: Adjusted the flex container for the Category Filter bar and the "Simulate Daily Alarm Check" button to properly align the button on the right on large screens and handle overflow correctly.
+
+## v2.7.4
+- **Emoji Categories**: Transitioned category icons from line icons back to colorful emojis to better match the visual identity of the previous version.
+- **Settings Reverted Design**: Updated the System Settings modal to match the previous SPA layout, including simulated target email, account diagnostics, backup/migration controls, and cloud sync disconnect options.
+- **Category Filter Bar & Alarm Simulator**: Brought back the category filter bar and the prominent "Simulate Daily Alarm Check" button to the main dashboard view above the tracked items columns.
+
 ## v2.7.3
 - **Legacy Data Support**: Fixed category and due date mapping issues for existing users.
 - **Date Parsing Fix**: Improved date parsing logic to prevent timezone shifts that caused due dates to calculate incorrectly.
