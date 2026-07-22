@@ -12,7 +12,7 @@ import { Bell, Plus } from 'lucide-react';
 import { resolveIcon } from '../utils';
 
 export default function Dashboard() {
-  const { tasks, categories, webhook } = useAppContext();
+  const { tasks, categories, webhook, updateTelemetry } = useAppContext();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -109,7 +109,29 @@ export default function Dashboard() {
     if (activeTriggers === 0) {
       alert("Alarm System Check\nAll active items are in healthy condition. No notification webhooks triggered today.");
     } else if (webhook?.url) {
-      alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}\n\n${activeTriggers} items matched alert criteria.`);
+      try {
+        const response = await fetch(webhook.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            event: "tasklapse_alerts", 
+            triggeredCount: activeTriggers,
+            timestamp: new Date().toISOString()
+          })
+        });
+        if (response.ok) {
+          updateTelemetry("Success 200");
+          alert(`Simulation payload dispatched to target email/webhook: ${webhook.url}\n\n${activeTriggers} items matched alert criteria.`);
+        } else {
+          updateTelemetry("Delivery Failed");
+          alert(`Simulation failed to deliver to target webhook: HTTP ${response.status}`);
+        }
+      } catch (err) {
+        updateTelemetry("Delivery Error");
+        alert(`Simulation failed to dispatch payload due to a network error.`);
+      }
     } else {
       alert(`Simulation completed. No target email or webhook is configured in Settings.\n\n${activeTriggers} items would have triggered an alert.`);
     }

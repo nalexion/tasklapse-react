@@ -31,6 +31,7 @@ interface AppContextType {
   unarchiveTask: (id: string) => Promise<void>;
   saveWebhook: (url: string, secret?: string) => Promise<void>;
   saveCategories: (newCategories: CategoryDef[]) => Promise<void>;
+  updateTelemetry: (status: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -194,8 +195,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isGuest, user]);
 
   const archiveTask = useCallback(async (id: string) => {
-    await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
-  }, [updateTask]);
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    if (task.recurrence && task.recurrence !== 'Does not repeat') {
+      // Roll original forward
+      const dateParts = task.date.split('-');
+      let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
+      
+      if (task.recurrence === 'Every Week') dateObj.setDate(dateObj.getDate() + 7);
+      else if (task.recurrence === 'Every 1 Month') dateObj.setMonth(dateObj.getMonth() + 1);
+      else if (task.recurrence === 'Every 3 Months') dateObj.setMonth(dateObj.getMonth() + 3);
+      else if (task.recurrence === 'Every 6 Months') dateObj.setMonth(dateObj.getMonth() + 6);
+      else if (task.recurrence === 'Every 1 Year') dateObj.setFullYear(dateObj.getFullYear() + 1);
+      else if (task.recurrence === 'Every 2 Years') dateObj.setFullYear(dateObj.getFullYear() + 2);
+      
+      const newDateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+      
+      // 1. Add clone to archive
+      const { id: _oldId, ...cloneData } = task;
+      const cloneRecord = { 
+        ...cloneData, 
+        archived: true, 
+        archivedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (isGuest) {
+        setTasks(prev => [...prev, { ...cloneRecord, id: crypto.randomUUID() } as Task]);
+      } else if (user) {
+        const ref = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
+        await addDoc(ref, cloneRecord);
+      }
+
+      // 2. Roll original task forward
+      await updateTask(id, { date: newDateStr, updatedAt: new Date().toISOString() });
+    } else {
+      await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
+    }
+  }, [tasks, updateTask, isGuest, user]);
 
   const unarchiveTask = useCallback(async (id: string) => {
     await updateTask(id, { archived: false });
@@ -222,11 +260,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isGuest, user]);
 
+  const updateTelemetry = useCallback(async (status: string) => {
+    if (isGuest || !user) return;
+    const time = new Date().toLocaleString();
+    const updates = { lastStatus: status, lastTime: time };
+    const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
+    await setDoc(ref, updates, { merge: true });
+    setWebhook(prev => ({ ...prev, ...updates }));
+  }, [isGuest, user]);
+
   return (
     <AppContext.Provider value={{
       user, isGuest, tasks, categories, webhook, loading,
       searchQuery, setSearchQuery,
-      loginAsGuest, logout, addTask, updateTask, deleteTask, archiveTask, unarchiveTask, saveWebhook, saveCategories
+      loginAsGuest, logout, addTask, updateTask, deleteTask, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry
     }}>
       {children}
     </AppContext.Provider>

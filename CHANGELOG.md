@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.9.0
+- **Recurrence & Archive Engine**: Fully implemented the date-math logic for recurring items. When a recurring task is checked off, a historical clone is created in the Archive, while the active task automatically rolls its target expiry date forward according to its schedule (Weekly, Monthly, Quarterly, Yearly).
+- **Telemetry System & Outbound Webhooks**: Enabled full execution of the notification evaluation engine during a "Simulate Daily Alarm". The payload is securely dispatched via `fetch` POST to the configured webhook endpoint, with corresponding Delivery Telemetry logged in the Settings UI as `Success 200` or `Delivery Failed`.
+- **UI & State Parity**: Verified dual storage mode (Firestore + localStorage listeners), category column filtering, and environment variable security.
+
 ## v2.8.1
 - **Bug Fix**: Addressed a runtime issue where `tasks` was improperly scoped in the Dashboard rendering logic.
 
