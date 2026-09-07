@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Settings, X, Plus, Trash2, Edit2, Tag } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, X, Plus, Trash2, Edit2, Tag, GripVertical } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { CategoryDef } from '../types';
 import { resolveIcon } from '../utils';
@@ -32,7 +32,48 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   const [editColor, setEditColor] = useState(AVAILABLE_COLORS[0].class);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+  const [localCategories, setLocalCategories] = useState<CategoryDef[]>(categories);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setLocalCategories(categories);
+  }, [categories]);
+
   if (!isOpen) return null;
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    // Small delay to prevent the dragged element from becoming invisible if re-rendered immediately
+    setTimeout(() => {
+      setDragOverIndex(index);
+    }, 0);
+  };
+
+  const handleDragEnter = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    setDragOverIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnd = async () => {
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newCats = [...localCategories];
+      const draggedItem = newCats[draggedIndex];
+      newCats.splice(draggedIndex, 1);
+      newCats.splice(dragOverIndex, 0, draggedItem);
+      setLocalCategories(newCats);
+      await saveCategories(newCats);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   const handleEdit = (cat: CategoryDef) => {
     setEditingId(cat.id);
@@ -158,9 +199,24 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
               </button>
 
               <div className="space-y-2">
-                {categories.map(cat => (
-                  <div key={cat.id} className="bg-slate-800/50 border border-slate-700 p-3 rounded-lg flex justify-between items-center group">
+                {localCategories.map((cat, index) => {
+                  const isBeingDragged = draggedIndex === index;
+                  const isDragOver = dragOverIndex === index && draggedIndex !== index;
+                  
+                  return (
+                  <div 
+                    key={cat.id} 
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index)}
+                    onDragEnter={(e) => handleDragEnter(e, index)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`bg-slate-800/50 border ${isDragOver ? 'border-indigo-500 bg-indigo-500/10 scale-[1.02]' : 'border-slate-700'} p-3 rounded-lg flex justify-between items-center group cursor-grab active:cursor-grabbing transition-all ${isBeingDragged ? 'opacity-30' : ''}`}
+                  >
                     <div className="flex items-center gap-3">
+                      <div className="cursor-grab active:cursor-grabbing p-1 -ml-2 text-slate-500 hover:text-slate-300">
+                        <GripVertical className="w-4 h-4" />
+                      </div>
                       <div className={`px-2 py-1 rounded border ${cat.color} flex items-center gap-2 font-medium`}>
                         <span>{resolveIcon(cat.icon)}</span> {cat.name}
                       </div>
@@ -182,7 +238,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
                       </button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             </>
           )}
