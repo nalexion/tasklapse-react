@@ -198,7 +198,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    if (task.recurrence && task.recurrence !== 'Does not repeat') {
+    const validRecurrences = ['Every Week', 'Every 1 Month', 'Every 3 Months', 'Every 6 Months', 'Every 1 Year', 'Every 2 Years'];
+    if (task.recurrence && validRecurrences.includes(task.recurrence)) {
       // Roll original forward
       const dateParts = task.date.split('-');
       let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));

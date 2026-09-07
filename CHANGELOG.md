@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.9.4
+- **Stale Active Task Purge**: Fixed a logical defect in the archive engine where items with invalid or deprecated recurrence schemas (e.g. legacy data) were unintentionally skipping the complete-archive branch and triggering a null roll-forward loop. This caused the item to be cloned to the Archive list while leaving the original item permanently stuck in the active "Due in Days" board. Unrecognized recurrence schemas now correctly force an absolute archive block.
+
 ## v2.9.3
 - **Archive Engine Patch**: Resolved a core engine defect where checking off a recurring task that was heavily overdue would only roll the target date forward by a single interval, keeping it visually stuck in the past. The engine now employs a continuous roll-forward loop ensuring the next target date correctly breaches the current date barrier.
 - **Archive Serialization Reliability**: Corrected an implicit error where older tasks missing newly introduced keys (`alerts`, `recurrence`) would pass `undefined` values into the clone artifact, causing Firestore `addDoc` rejections during the Check Off workflow.
