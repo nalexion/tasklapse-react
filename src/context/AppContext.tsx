@@ -203,23 +203,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const dateParts = task.date.split('-');
       let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
       
-      if (task.recurrence === 'Every Week') dateObj.setDate(dateObj.getDate() + 7);
-      else if (task.recurrence === 'Every 1 Month') dateObj.setMonth(dateObj.getMonth() + 1);
-      else if (task.recurrence === 'Every 3 Months') dateObj.setMonth(dateObj.getMonth() + 3);
-      else if (task.recurrence === 'Every 6 Months') dateObj.setMonth(dateObj.getMonth() + 6);
-      else if (task.recurrence === 'Every 1 Year') dateObj.setFullYear(dateObj.getFullYear() + 1);
-      else if (task.recurrence === 'Every 2 Years') dateObj.setFullYear(dateObj.getFullYear() + 2);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      // Keep rolling forward until it is no longer overdue
+      do {
+        if (task.recurrence === 'Every Week') dateObj.setDate(dateObj.getDate() + 7);
+        else if (task.recurrence === 'Every 1 Month') dateObj.setMonth(dateObj.getMonth() + 1);
+        else if (task.recurrence === 'Every 3 Months') dateObj.setMonth(dateObj.getMonth() + 3);
+        else if (task.recurrence === 'Every 6 Months') dateObj.setMonth(dateObj.getMonth() + 6);
+        else if (task.recurrence === 'Every 1 Year') dateObj.setFullYear(dateObj.getFullYear() + 1);
+        else if (task.recurrence === 'Every 2 Years') dateObj.setFullYear(dateObj.getFullYear() + 2);
+        else break;
+      } while (dateObj < now);
       
       const newDateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
       
       // 1. Add clone to archive
       const { id: _oldId, ...cloneData } = task;
-      const cloneRecord = { 
+      const cloneRecord: any = { 
         ...cloneData, 
         archived: true, 
         archivedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+
+      // Strip any undefined fields to prevent Firestore addDoc errors
+      Object.keys(cloneRecord).forEach(key => {
+        if (cloneRecord[key] === undefined) delete cloneRecord[key];
+      });
 
       if (isGuest) {
         setTasks(prev => [...prev, { ...cloneRecord, id: crypto.randomUUID() } as Task]);

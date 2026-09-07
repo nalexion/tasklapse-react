@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.9.3
+- **Archive Engine Patch**: Resolved a core engine defect where checking off a recurring task that was heavily overdue would only roll the target date forward by a single interval, keeping it visually stuck in the past. The engine now employs a continuous roll-forward loop ensuring the next target date correctly breaches the current date barrier.
+- **Archive Serialization Reliability**: Corrected an implicit error where older tasks missing newly introduced keys (`alerts`, `recurrence`) would pass `undefined` values into the clone artifact, causing Firestore `addDoc` rejections during the Check Off workflow.
+
+
 ## v2.9.2
 - **Webhook Payload Mapping**: Restructured the daily alarm simulation to dispatch individual webhooks per active item, flattening the requested parameters (`event`, `item`, `daysRemaining`, `expiryDate`, `notes`, `category`, `driverMode`, `user`, `auth_secret`) directly to the root for Make.com / Zapier parsing compatibility.
 - **Delivery Telemetry State**: Fixed an issue where the React `useContext` was failing to persist the dispatch log status due to an early `isGuest` return break in the payload sequence.
