@@ -3,7 +3,7 @@ import { Mail, Rocket } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function IntegrationPanel() {
-  const { webhook, saveWebhook, isGuest } = useAppContext();
+  const { webhook, saveWebhook, isGuest, triggeredLogs, setTriggeredLogs } = useAppContext();
   const [url, setUrl] = useState('');
   const [secret, setSecret] = useState('');
 
@@ -17,6 +17,10 @@ export default function IntegrationPanel() {
       return;
     }
     await saveWebhook(url.trim(), secret.trim());
+  };
+
+  const handleClearLogs = () => {
+    setTriggeredLogs([]);
   };
 
   const statusColor = (webhook.lastStatus && (webhook.lastStatus.includes('200') || webhook.lastStatus.includes('Success'))) ? 'text-emerald-400' : 'text-amber-400';
@@ -37,15 +41,34 @@ export default function IntegrationPanel() {
               <p className="text-sm text-slate-400">Preview of automated warning emails</p>
             </div>
           </div>
-          <button className="text-sm text-slate-400 hover:text-white transition-colors">
+          <button onClick={handleClearLogs} className="text-sm text-slate-400 hover:text-white transition-colors">
             Clear Logs
           </button>
         </div>
         
-        <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] text-slate-500">
-          <Mail className="w-12 h-12 mb-3 opacity-20" />
-          <p>No email alerts triggered today.</p>
-        </div>
+        {triggeredLogs.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] text-slate-500">
+            <Mail className="w-12 h-12 mb-3 opacity-20" />
+            <p>No email alerts triggered today.</p>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto space-y-3 max-h-[400px]">
+            {triggeredLogs.map((log, i) => (
+              <div key={i} className="p-3 bg-slate-900 border border-slate-700 rounded-lg text-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-bold text-white">{log.item}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded ${log.daysRemaining === 0 ? 'bg-rose-500/20 text-rose-400' : (log.daysRemaining === 1 ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/20 text-indigo-400')}`}>
+                    {log.daysRemaining === 0 ? 'EXPIRES TODAY' : `${log.daysRemaining} days left`}
+                  </span>
+                </div>
+                <div className="text-slate-400 text-xs">
+                  Category: {log.category} <br />
+                  Target Date: {log.expiryDate}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Cloud Integrations */}

@@ -19,6 +19,8 @@ interface AppContextType {
   tasks: Task[];
   categories: CategoryDef[];
   webhook: WebhookData;
+  triggeredLogs: any[];
+  setTriggeredLogs: (logs: any[]) => void;
   loading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -46,6 +48,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<CategoryDef[]>(DEFAULT_CATEGORIES);
   const [webhook, setWebhook] = useState<WebhookData>({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
+  const [triggeredLogs, setTriggeredLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -286,7 +289,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   return (
     <AppContext.Provider value={{
-      user, isGuest, tasks, categories, webhook, loading,
+      user, isGuest, tasks, categories, webhook, triggeredLogs, setTriggeredLogs, loading,
       searchQuery, setSearchQuery,
       loginAsGuest, logout, addTask, updateTask, deleteTask, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry
     }}>

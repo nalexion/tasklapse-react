@@ -1,6 +1,9 @@
 # Changelog
 
-## v2.9.4
+## v2.9.5
+- **Simulation Logs UI Restoration**: Reintroduced the visual array of triggered email notifications directly inside the interface integration panel, allowing users to visually verify which items were matched during a simulation dispatch.
+
+## v2.9.5
 - **Stale Active Task Purge**: Fixed a logical defect in the archive engine where items with invalid or deprecated recurrence schemas (e.g. legacy data) were unintentionally skipping the complete-archive branch and triggering a null roll-forward loop. This caused the item to be cloned to the Archive list while leaving the original item permanently stuck in the active "Due in Days" board. Unrecognized recurrence schemas now correctly force an absolute archive block.
 
 ## v2.9.3
