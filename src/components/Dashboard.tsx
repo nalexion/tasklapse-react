@@ -246,7 +246,7 @@ export default function Dashboard() {
         {/* Global Footer with Support Link & Quick Backup Action */}
         <footer className="mt-12 pt-6 pb-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-400">TaskLapse v3.0.0</span>
+            <span className="font-semibold text-slate-400">TaskLapse v3.0.1</span>
             <span>•</span>
             <button 
               onClick={() => setIsAboutModalOpen(true)}

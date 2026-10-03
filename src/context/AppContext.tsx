@@ -7,6 +7,7 @@ import { RecurrenceEngine } from '../services/recurrence/RecurrenceEngine';
 import { ITaskRepository } from '../services/storage/ITaskRepository';
 import { LocalStorageRepository, LOCAL_STORAGE_KEY, LOCAL_CATEGORIES_KEY } from '../services/storage/LocalStorageRepository';
 import { FirestoreRepository } from '../services/storage/FirestoreRepository';
+import { SchemaValidator } from '../services/validation/SchemaValidator';
 import { UIProvider, useUIContext } from './UIContext';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
@@ -259,7 +260,7 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   const exportBackupJSON = useCallback((): BackupData => {
     return {
       app: 'TaskLapse',
-      version: '3.0.0',
+      version: '3.0.1',
       exportedAt: new Date().toISOString(),
       tasksCount: tasks.length,
       categoriesCount: categories.length,
@@ -286,47 +287,12 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     mode: 'replace' | 'merge' = 'replace'
   ): Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }> => {
     try {
-      let rawTasks: any[] = [];
-      let rawCategories: any[] = [];
-
-      if (Array.isArray(rawInput)) {
-        rawTasks = rawInput;
-      } else if (rawInput && typeof rawInput === 'object') {
-        if (Array.isArray(rawInput.tasks)) rawTasks = rawInput.tasks;
-        if (Array.isArray(rawInput.categories)) rawCategories = rawInput.categories;
-      } else {
-        throw new Error("Invalid backup format. Expected a JSON backup file or tasks array.");
+      const report = SchemaValidator.validateBackupPayload(rawInput);
+      if (!report.isValid) {
+        throw new Error(report.errors.slice(0, 3).join(' | '));
       }
 
-      if (rawTasks.length === 0 && rawCategories.length === 0) {
-        throw new Error("No tasks or categories found in the provided backup file.");
-      }
-
-      const sanitizedTasks: Task[] = rawTasks.map((t: any) => ({
-        id: t.id || crypto.randomUUID(),
-        name: String(t.name || 'Untitled Item'),
-        date: String(t.date || t.startDate || new Date().toISOString().split('T')[0]),
-        expiresDate: t.expiresDate ? String(t.expiresDate) : undefined,
-        startDate: t.startDate ? String(t.startDate) : undefined,
-        category: String(t.category || 'Personal'),
-        notes: String(t.notes || ''),
-        recurrence: String(t.recurrence || 'Does not repeat'),
-        alerts: t.alerts || { thirtyDays: false, sevenDays: true, oneDay: true },
-        archived: Boolean(t.archived),
-        archivedAt: t.archivedAt ? String(t.archivedAt) : undefined,
-        createdAt: t.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-
-      let sanitizedCategories: CategoryDef[] = [];
-      if (rawCategories.length > 0) {
-        sanitizedCategories = rawCategories.map((c: any) => ({
-          id: c.id || crypto.randomUUID(),
-          name: String(c.name || 'Custom'),
-          color: String(c.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30'),
-          icon: String(c.icon || '📁')
-        }));
-      }
+      const { sanitizedTasks, sanitizedCategories } = report;
 
       const result = await storageRepo.batchImport(
         tasks,

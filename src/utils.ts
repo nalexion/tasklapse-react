@@ -1,3 +1,5 @@
+import { RecurrenceEngine } from './services/recurrence/RecurrenceEngine';
+
 export const resolveIcon = (iconName: string): string => {
   const legacyMap: Record<string, string> = {
     'User': '👤', 'Home': '🏠', 'Heart': '❤️', 'Car': '🚗', 'Repeat': '💳',
@@ -38,39 +40,9 @@ export const isFutureDate = (dateString?: string): boolean => {
 
 /**
  * Calculates the Next Due Date based on the Start Date and the Recurrence interval.
+ * Uses deterministic day-clamping via RecurrenceEngine.
  */
 export const calculateDueDateFromStart = (startDate: string, recurrence: string): string => {
   if (!startDate) return '';
-  const parts = startDate.split('-');
-  if (parts.length !== 3) return startDate;
-  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-
-  switch (recurrence) {
-    case 'Every Week':
-      d.setDate(d.getDate() + 7);
-      break;
-    case 'Every 1 Month':
-      d.setMonth(d.getMonth() + 1);
-      break;
-    case 'Every 3 Months':
-      d.setMonth(d.getMonth() + 3);
-      break;
-    case 'Every 6 Months':
-      d.setMonth(d.getMonth() + 6);
-      break;
-    case 'Every 1 Year':
-      d.setFullYear(d.getFullYear() + 1);
-      break;
-    case 'Every 2 Years':
-      d.setFullYear(d.getFullYear() + 2);
-      break;
-    default:
-      // Does not repeat: default due date matches start date
-      return startDate;
-  }
-
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return RecurrenceEngine.calculateNextDate(startDate, recurrence);
 };

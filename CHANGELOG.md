@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.0.1
+- **Architectural Improvement 3: Deterministic Month-End Day Clamping & Strict Contract Schema Validation**:
+  - **Deterministic Calendar Mathematics (`RecurrenceEngine.ts`)**: Implemented safe day-of-month clamping (`addMonthsClamped`, `addYearsClamped`) that prevents JavaScript month rollover overflow (e.g. Jan 31 + 1 month now evaluates safely to Feb 28/29 rather than drifting into March 3). Anchored schedule arithmetic ensures recurring tasks on month-end dates (29th, 30th, 31st) retain their cadence indefinitely.
+  - **Unified Date Calculation**: Connected `src/utils.ts` (`calculateDueDateFromStart`) directly to `RecurrenceEngine.calculateNextDate` to eliminate duplicate logic and guarantee calendar accuracy everywhere.
+  - **Strict Schema & Contract Validator (`SchemaValidator.ts`)**: Introduced a dedicated validation layer that verifies calendar date feasibility, bounds checking, string sanitization, category validity, and structural integrity for offline JSON imports and cloud backups with granular diagnostic reporting.
+  - **Version Update**: Bumped version to `v3.0.1` across all metadata, UI badges, and documentation.
+
 ## v3.0.0
 - **Major Architectural Overhaul: Separation of Concerns (SRP), Repository Pattern & Context Slicing**:
   - **Storage Repository Pattern (`ITaskRepository`)**: Decoupled persistent data operations from the React application layer into dedicated repositories (`LocalStorageRepository` for Guest mode and `FirestoreRepository` for Cloud mode).

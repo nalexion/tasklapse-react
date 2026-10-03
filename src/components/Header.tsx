@@ -49,7 +49,7 @@ export default function Header({
               <h1 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-wide shrink-0">
                 TaskLapse
               </h1>
-              <span className="text-[10px] sm:text-xs font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700/60 shrink-0">v3.0.0</span>
+              <span className="text-[10px] sm:text-xs font-mono text-slate-400 bg-slate-800/80 px-1.5 py-0.2 rounded border border-slate-700/60 shrink-0">v3.0.1</span>
               {/* Only show wide pill badge on tablet/desktop to avoid mobile overlap */}
               <span className={`hidden md:inline-flex ${syncBadgeClass}`}>{syncBadgeText}</span>
             </div>
