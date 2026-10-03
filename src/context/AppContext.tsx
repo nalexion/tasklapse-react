@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { auth, db } from '../config/firebase';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { Task, WebhookData, CategoryDef, BackupData } from '../types';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
@@ -217,9 +217,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setTasks(prev => prev.filter(t => !t.archived));
     } else if (user) {
       const toDelete = tasks.filter(t => t.archived);
-      for (const item of toDelete) {
-        const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
-        await deleteDoc(ref);
+      if (toDelete.length > 0) {
+        const BATCH_SIZE = 450;
+        for (let i = 0; i < toDelete.length; i += BATCH_SIZE) {
+          const chunk = toDelete.slice(i, i + BATCH_SIZE);
+          const batch = writeBatch(db);
+          chunk.forEach(item => {
+            const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
+            batch.delete(ref);
+          });
+          await batch.commit();
+        }
       }
     }
   }, [isGuest, user, tasks]);
@@ -243,14 +251,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       
       const now = new Date();
       now.setHours(0, 0, 0, 0);
-
-      // Also calculate new start date if task had one
-      let newStartDateStr: string | undefined = undefined;
-      let startDateObj: Date | null = null;
-      if (task.startDate) {
-        const startParts = task.startDate.split('-');
-        startDateObj = new Date(Number(startParts[0]), Number(startParts[1]) - 1, Number(startParts[2]));
-      }
 
       // Keep rolling forward until it is no longer overdue
       do {
@@ -285,18 +285,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (cloneRecord[key] === undefined) delete cloneRecord[key];
       });
 
+      // Atomically commit archive record creation and original task roll-forward
       if (isGuest) {
-        setTasks(prev => [...prev, { ...cloneRecord, id: crypto.randomUUID() } as Task]);
+        setTasks(prev => {
+          const updatedOriginal = prev.map(t => t.id === id ? { ...t, date: newDateStr, updatedAt: new Date().toISOString() } : t);
+          return [...updatedOriginal, { ...cloneRecord, id: crypto.randomUUID() } as Task];
+        });
       } else if (user) {
-        const ref = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
-        await addDoc(ref, cloneRecord);
+        const batch = writeBatch(db);
+        const cloneRef = doc(collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items'));
+        batch.set(cloneRef, cloneRecord);
+        const originalRef = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
+        batch.update(originalRef, { 
+          date: newDateStr, 
+          updatedAt: new Date().toISOString() 
+        });
+        await batch.commit();
       }
-
-      // 2. Roll original task forward
-      await updateTask(id, { 
-        date: newDateStr, 
-        updatedAt: new Date().toISOString() 
-      });
     } else {
       await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
     }
@@ -341,7 +346,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const exportBackupJSON = useCallback((): BackupData => {
     return {
       app: 'TaskLapse',
-      version: '2.9.8',
+      version: '2.9.9',
       exportedAt: new Date().toISOString(),
       tasksCount: tasks.length,
       categoriesCount: categories.length,
@@ -447,20 +452,50 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } else if (user) {
         const itemsCol = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
 
+        const BATCH_SIZE = 450;
+        let batch = writeBatch(db);
+        let opCount = 0;
+
+        // Atomic deletions if replacing
         if (mode === 'replace') {
           for (const item of tasks) {
             const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
-            await deleteDoc(ref);
+            batch.delete(ref);
+            opCount++;
+            if (opCount >= BATCH_SIZE) {
+              await batch.commit();
+              batch = writeBatch(db);
+              opCount = 0;
+            }
           }
         }
 
-        for (const task of sanitizedTasks) {
+        // Determine tasks to insert
+        let tasksToInsert = sanitizedTasks;
+        if (mode === 'merge') {
+          const existingIds = new Set(tasks.map(t => t.id));
+          tasksToInsert = sanitizedTasks.filter(t => !existingIds.has(t.id));
+        }
+
+        // Atomic additions
+        for (const task of tasksToInsert) {
           const { id: _ignoredId, ...taskPayload } = task;
           const cleanedPayload: any = { ...taskPayload };
           Object.keys(cleanedPayload).forEach(key => {
             if (cleanedPayload[key] === undefined) delete cleanedPayload[key];
           });
-          await addDoc(itemsCol, cleanedPayload);
+          const newDocRef = doc(itemsCol);
+          batch.set(newDocRef, cleanedPayload);
+          opCount++;
+          if (opCount >= BATCH_SIZE) {
+            await batch.commit();
+            batch = writeBatch(db);
+            opCount = 0;
+          }
+        }
+
+        if (opCount > 0) {
+          await batch.commit();
         }
 
         if (sanitizedCategories.length > 0) {
@@ -475,9 +510,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
         return {
           success: true,
-          tasksCount: sanitizedTasks.length,
+          tasksCount: tasksToInsert.length,
           categoriesCount: sanitizedCategories.length,
-          message: `Successfully uploaded ${sanitizedTasks.length} task(s) to your cloud account.`
+          message: mode === 'replace'
+            ? `Successfully replaced cloud records with ${tasksToInsert.length} task(s) in an atomic batch transaction.`
+            : `Successfully merged ${tasksToInsert.length} new task(s) into your cloud account in an atomic batch transaction.`
         };
       }
 

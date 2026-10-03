@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.9.9
+- **Architectural Improvement 1: Atomic Batching & Transactional Integrity via Firestore `writeBatch`**:
+  - **Atomic Backup Ingestion (`importBackupData`)**: Converted multi-document delete and insert loops in Cloud mode (`Firestore`) to atomic `writeBatch` chunks (up to 450 operations per batch). This eliminates partial failure states during backup replacement/merging and reduces network overhead from $O(N)$ sequential HTTP calls to single atomic batch commits.
+  - **Atomic Recurrence Roll-Forward (`archiveTask`)**: Transitioned recurring task completion to an atomic batch transaction. Archiving the completed task cycle (`set` archive clone) and advancing the original task's target date (`update` active task) now execute together atomically in a single write operation.
+  - **Batch Archive Purge (`clearArchivedTasks`)**: Optimized the "Clear All Archives" operation in Cloud mode with batched deletions, avoiding rate limits and ensuring instantaneous, clean removals.
+  - **Version Synchronization**: Bumped application to `v2.9.9` across all components (`package.json`, `Header`, `AuthScreen`, `AboutModal`, `Dashboard`, `AppContext`, `README.md`).
+
 ## v2.9.8
 - **Offline JSON Backup & Restore Engine**:
   - Full data backup export to structured JSON (`tasks`, `categories`, timestamps, and recurrence schedules) ensuring users always possess an offline copy of their commitments.

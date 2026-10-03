@@ -35,7 +35,7 @@ export default function AboutModal({ isOpen, onClose, onOpenSettings }: AboutMod
     setTimeout(() => setCopiedEmail(false), 2500);
   };
 
-  const bugEmailLink = `mailto:${supportEmail}?subject=${encodeURIComponent('[Bug Report] TaskLapse v2.9.8')}&body=${encodeURIComponent(
+  const bugEmailLink = `mailto:${supportEmail}?subject=${encodeURIComponent('[Bug Report] TaskLapse v2.9.9')}&body=${encodeURIComponent(
     'Please describe the issue:\n\nSteps to reproduce:\n1. \n2. \n\nExpected behavior:\n\nDevice / Browser:\n'
   )}`;
 
@@ -59,7 +59,7 @@ export default function AboutModal({ isOpen, onClose, onOpenSettings }: AboutMod
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-white leading-tight">About & Support</h3>
                 <span className="text-[10px] sm:text-xs font-mono text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30 font-semibold">
-                  v2.9.8
+                  v2.9.9
                 </span>
               </div>
               <p className="text-xs text-slate-400">Help center, feature requests, and developer contact</p>
