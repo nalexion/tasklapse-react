@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { auth, db } from '../config/firebase';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
 import { Task, WebhookData, CategoryDef, BackupData } from '../types';
+import { RecurrenceEngine } from '../services/recurrence/RecurrenceEngine';
+import { ITaskRepository } from '../services/storage/ITaskRepository';
+import { LocalStorageRepository, LOCAL_STORAGE_KEY, LOCAL_CATEGORIES_KEY } from '../services/storage/LocalStorageRepository';
+import { FirestoreRepository } from '../services/storage/FirestoreRepository';
+import { UIProvider, useUIContext } from './UIContext';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'Personal', name: 'Personal', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: '👤' },
@@ -13,14 +18,14 @@ export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'Work', name: 'Work / Business', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', icon: '💼' }
 ];
 
-interface AppContextType {
+export interface AppContextType {
   user: User | null;
   isGuest: boolean;
   tasks: Task[];
   categories: CategoryDef[];
   webhook: WebhookData;
   triggeredLogs: any[];
-  setTriggeredLogs: (logs: any[]) => void;
+  setTriggeredLogs: React.Dispatch<React.SetStateAction<any[]>>;
   loading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -41,33 +46,28 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const LOCAL_STORAGE_KEY = 'tasklapse_local_items';
-const LOCAL_CATEGORIES_KEY = 'tasklapse_local_categories';
 const DEFAULT_APP_ID = 'lifesync-cloud-tracker';
 
-export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { searchQuery, setSearchQuery, triggeredLogs, setTriggeredLogs } = useUIContext();
+
   const [user, setUser] = useState<User | null>(null);
   const [isGuest, setIsGuest] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<CategoryDef[]>(DEFAULT_CATEGORIES);
   const [webhook, setWebhook] = useState<WebhookData>({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
-  const [triggeredLogs, setTriggeredLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  // Save local tasks effect
-  useEffect(() => {
+  // Repository abstraction (DIP)
+  const storageRepo: ITaskRepository = useMemo(() => {
     if (isGuest) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
+      return new LocalStorageRepository();
     }
-  }, [tasks, isGuest]);
-
-  useEffect(() => {
-    if (isGuest) {
-      localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(categories));
+    if (user) {
+      return new FirestoreRepository(db, user.uid);
     }
-  }, [categories, isGuest]);
+    return new LocalStorageRepository();
+  }, [isGuest, user]);
 
   // Auth State Observer
   useEffect(() => {
@@ -94,8 +94,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const ref = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
       unsubscribeTasks = onSnapshot(ref, (snapshot) => {
         const cloudTasks: Task[] = [];
-        snapshot.forEach(doc => {
-          cloudTasks.push({ id: doc.id, ...doc.data() } as Task);
+        snapshot.forEach(docSnap => {
+          cloudTasks.push({ id: docSnap.id, ...docSnap.data() } as Task);
         });
         setTasks(cloudTasks);
       }, (error) => {
@@ -128,11 +128,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsGuest(true);
     setUser(null);
     setWebhook({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
+
     const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (localData) {
       try {
         setTasks(JSON.parse(localData));
-      } catch (e) {
+      } catch {
         setTasks([]);
       }
     } else {
@@ -143,7 +144,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (localCatData) {
       try {
         setCategories(JSON.parse(localCatData));
-      } catch (e) {
+      } catch {
         setCategories(DEFAULT_CATEGORIES);
       }
     } else {
@@ -163,158 +164,70 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const addTask = useCallback(async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'archived'>) => {
-    const cleanedData: any = { ...taskData };
-    if (!cleanedData.startDate) {
-      delete cleanedData.startDate;
-    }
-    if (!cleanedData.expiresDate) {
-      delete cleanedData.expiresDate;
-    }
-    const newTask: Partial<Task> = {
-      ...cleanedData,
-      archived: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
+    const created = await storageRepo.addTask(taskData);
     if (isGuest) {
-      const localTask = { ...newTask, id: crypto.randomUUID() } as Task;
-      setTasks(prev => [...prev, localTask]);
-    } else if (user) {
-      const ref = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
-      await addDoc(ref, newTask);
+      setTasks(prev => [...prev, created]);
     }
-  }, [isGuest, user]);
+  }, [storageRepo, isGuest]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    const cleanedUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
-    if (cleanedUpdates.startDate === '' || cleanedUpdates.startDate === undefined) {
-      delete cleanedUpdates.startDate;
-    }
-    if (cleanedUpdates.expiresDate === '' || cleanedUpdates.expiresDate === undefined) {
-      delete cleanedUpdates.expiresDate;
-    }
-    
+    await storageRepo.updateTask(id, updates);
     if (isGuest) {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, ...cleanedUpdates } : t));
-    } else if (user) {
-      const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
-      await updateDoc(ref, cleanedUpdates);
+      setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)));
     }
-  }, [isGuest, user]);
+  }, [storageRepo, isGuest]);
 
   const deleteTask = useCallback(async (id: string) => {
+    await storageRepo.deleteTask(id);
     if (isGuest) {
       setTasks(prev => prev.filter(t => t.id !== id));
-    } else if (user) {
-      const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
-      await deleteDoc(ref);
     }
-  }, [isGuest, user]);
+  }, [storageRepo, isGuest]);
 
   const clearArchivedTasks = useCallback(async () => {
+    const archivedTasks = tasks.filter(t => t.archived);
+    await storageRepo.clearArchivedTasks(archivedTasks);
     if (isGuest) {
       setTasks(prev => prev.filter(t => !t.archived));
-    } else if (user) {
-      const toDelete = tasks.filter(t => t.archived);
-      if (toDelete.length > 0) {
-        const BATCH_SIZE = 450;
-        for (let i = 0; i < toDelete.length; i += BATCH_SIZE) {
-          const chunk = toDelete.slice(i, i + BATCH_SIZE);
-          const batch = writeBatch(db);
-          chunk.forEach(item => {
-            const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
-            batch.delete(ref);
-          });
-          await batch.commit();
-        }
-      }
     }
-  }, [isGuest, user, tasks]);
+  }, [storageRepo, isGuest, tasks]);
 
   const archiveTask = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
-    const validRecurrences = ['Every Week', 'Every 1 Month', 'Every 3 Months', 'Every 6 Months', 'Every 1 Year', 'Every 2 Years'];
-    if (task.recurrence && validRecurrences.includes(task.recurrence)) {
-      // Check if task has an expiresDate and has already reached or passed it
-      if (task.expiresDate && task.date >= task.expiresDate) {
-        // Expiration date reached: do NOT regenerate another cycle
-        await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
+    if (task.recurrence && RecurrenceEngine.isValidRecurrence(task.recurrence)) {
+      const { cloneRecord, nextDateStr, isExpired } = RecurrenceEngine.rollForwardTask(task);
+
+      if (isExpired) {
+        await storageRepo.archiveSingleTask(id);
+        if (isGuest) {
+          setTasks(prev => prev.map(t => (t.id === id ? { ...t, archived: true, archivedAt: new Date().toISOString() } : t)));
+        }
         return;
       }
 
-      // Roll original forward
-      const dateParts = task.date.split('-');
-      let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
-      
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-
-      // Keep rolling forward until it is no longer overdue
-      do {
-        if (task.recurrence === 'Every Week') dateObj.setDate(dateObj.getDate() + 7);
-        else if (task.recurrence === 'Every 1 Month') dateObj.setMonth(dateObj.getMonth() + 1);
-        else if (task.recurrence === 'Every 3 Months') dateObj.setMonth(dateObj.getMonth() + 3);
-        else if (task.recurrence === 'Every 6 Months') dateObj.setMonth(dateObj.getMonth() + 6);
-        else if (task.recurrence === 'Every 1 Year') dateObj.setFullYear(dateObj.getFullYear() + 1);
-        else if (task.recurrence === 'Every 2 Years') dateObj.setFullYear(dateObj.getFullYear() + 2);
-        else break;
-      } while (dateObj < now);
-      
-      const newDateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-
-      // If the next calculated date exceeds expiresDate, the task expires and must not regenerate
-      if (task.expiresDate && newDateStr > task.expiresDate) {
-        await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
-        return;
-      }
-      
-      // 1. Add clone of completed cycle to archive
-      const { id: _oldId, ...cloneData } = task;
-      const cloneRecord: any = { 
-        ...cloneData, 
-        archived: true, 
-        archivedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // Strip any undefined fields to prevent Firestore addDoc errors
-      Object.keys(cloneRecord).forEach(key => {
-        if (cloneRecord[key] === undefined) delete cloneRecord[key];
-      });
-
-      // Atomically commit archive record creation and original task roll-forward
+      await storageRepo.archiveRecurringTask(id, cloneRecord, nextDateStr);
       if (isGuest) {
         setTasks(prev => {
-          const updatedOriginal = prev.map(t => t.id === id ? { ...t, date: newDateStr, updatedAt: new Date().toISOString() } : t);
-          return [...updatedOriginal, { ...cloneRecord, id: crypto.randomUUID() } as Task];
+          const updated = prev.map(t => (t.id === id ? { ...t, date: nextDateStr, updatedAt: new Date().toISOString() } : t));
+          return [...updated, { ...cloneRecord, id: crypto.randomUUID() } as Task];
         });
-      } else if (user) {
-        const batch = writeBatch(db);
-        const cloneRef = doc(collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items'));
-        batch.set(cloneRef, cloneRecord);
-        const originalRef = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
-        batch.update(originalRef, { 
-          date: newDateStr, 
-          updatedAt: new Date().toISOString() 
-        });
-        await batch.commit();
       }
     } else {
-      await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
+      await storageRepo.archiveSingleTask(id);
+      if (isGuest) {
+        setTasks(prev => prev.map(t => (t.id === id ? { ...t, archived: true, archivedAt: new Date().toISOString() } : t)));
+      }
     }
-  }, [tasks, updateTask, isGuest, user]);
+  }, [tasks, storageRepo, isGuest]);
 
   const unarchiveTask = useCallback(async (id: string) => {
     await updateTask(id, { archived: false });
   }, [updateTask]);
 
   const saveWebhook = useCallback(async (url: string, targetEmail?: string, secret?: string) => {
-    if (isGuest) {
-      return;
-    }
+    if (isGuest) return;
     if (user) {
       const currentSecret = secret !== undefined ? secret : webhook.secret;
       const currentEmail = targetEmail !== undefined ? targetEmail : webhook.targetEmail;
@@ -346,7 +259,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const exportBackupJSON = useCallback((): BackupData => {
     return {
       app: 'TaskLapse',
-      version: '2.9.9',
+      version: '3.0.0',
       exportedAt: new Date().toISOString(),
       tasksCount: tasks.length,
       categoriesCount: categories.length,
@@ -369,7 +282,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [exportBackupJSON]);
 
   const importBackupData = useCallback(async (
-    rawInput: any, 
+    rawInput: any,
     mode: 'replace' | 'merge' = 'replace'
   ): Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }> => {
     try {
@@ -377,15 +290,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       let rawCategories: any[] = [];
 
       if (Array.isArray(rawInput)) {
-        // Legacy backup format (array of tasks)
         rawTasks = rawInput;
       } else if (rawInput && typeof rawInput === 'object') {
-        if (Array.isArray(rawInput.tasks)) {
-          rawTasks = rawInput.tasks;
-        }
-        if (Array.isArray(rawInput.categories)) {
-          rawCategories = rawInput.categories;
-        }
+        if (Array.isArray(rawInput.tasks)) rawTasks = rawInput.tasks;
+        if (Array.isArray(rawInput.categories)) rawCategories = rawInput.categories;
       } else {
         throw new Error("Invalid backup format. Expected a JSON backup file or tasks array.");
       }
@@ -394,7 +302,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         throw new Error("No tasks or categories found in the provided backup file.");
       }
 
-      // Sanitize tasks
       const sanitizedTasks: Task[] = rawTasks.map((t: any) => ({
         id: t.id || crypto.randomUUID(),
         name: String(t.name || 'Untitled Item'),
@@ -411,7 +318,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         updatedAt: new Date().toISOString()
       }));
 
-      // Sanitize categories
       let sanitizedCategories: CategoryDef[] = [];
       if (rawCategories.length > 0) {
         sanitizedCategories = rawCategories.map((c: any) => ({
@@ -422,6 +328,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }));
       }
 
+      const result = await storageRepo.batchImport(
+        tasks,
+        sanitizedTasks,
+        mode,
+        sanitizedCategories,
+        categories
+      );
+
       if (isGuest) {
         let finalTasks = sanitizedTasks;
         if (mode === 'merge') {
@@ -430,7 +344,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           finalTasks = [...tasks, ...newTasks];
         }
         setTasks(finalTasks);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(finalTasks));
 
         if (sanitizedCategories.length > 0) {
           let finalCategories = sanitizedCategories;
@@ -440,85 +353,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             finalCategories = [...categories, ...newCats];
           }
           setCategories(finalCategories);
-          localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(finalCategories));
         }
-
-        return {
-          success: true,
-          tasksCount: sanitizedTasks.length,
-          categoriesCount: sanitizedCategories.length,
-          message: `Successfully imported ${sanitizedTasks.length} task(s)${sanitizedCategories.length ? ` and ${sanitizedCategories.length} categories` : ''} into offline storage.`
-        };
-      } else if (user) {
-        const itemsCol = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
-
-        const BATCH_SIZE = 450;
-        let batch = writeBatch(db);
-        let opCount = 0;
-
-        // Atomic deletions if replacing
-        if (mode === 'replace') {
-          for (const item of tasks) {
-            const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
-            batch.delete(ref);
-            opCount++;
-            if (opCount >= BATCH_SIZE) {
-              await batch.commit();
-              batch = writeBatch(db);
-              opCount = 0;
-            }
-          }
-        }
-
-        // Determine tasks to insert
-        let tasksToInsert = sanitizedTasks;
-        if (mode === 'merge') {
-          const existingIds = new Set(tasks.map(t => t.id));
-          tasksToInsert = sanitizedTasks.filter(t => !existingIds.has(t.id));
-        }
-
-        // Atomic additions
-        for (const task of tasksToInsert) {
-          const { id: _ignoredId, ...taskPayload } = task;
-          const cleanedPayload: any = { ...taskPayload };
-          Object.keys(cleanedPayload).forEach(key => {
-            if (cleanedPayload[key] === undefined) delete cleanedPayload[key];
-          });
-          const newDocRef = doc(itemsCol);
-          batch.set(newDocRef, cleanedPayload);
-          opCount++;
-          if (opCount >= BATCH_SIZE) {
-            await batch.commit();
-            batch = writeBatch(db);
-            opCount = 0;
-          }
-        }
-
-        if (opCount > 0) {
-          await batch.commit();
-        }
-
-        if (sanitizedCategories.length > 0) {
-          let finalCats = sanitizedCategories;
-          if (mode === 'merge') {
-            const existingCatIds = new Set(categories.map(c => c.id));
-            const newCats = sanitizedCategories.filter(c => !existingCatIds.has(c.id));
-            finalCats = [...categories, ...newCats];
-          }
-          await saveCategories(finalCats);
-        }
-
-        return {
-          success: true,
-          tasksCount: tasksToInsert.length,
-          categoriesCount: sanitizedCategories.length,
-          message: mode === 'replace'
-            ? `Successfully replaced cloud records with ${tasksToInsert.length} task(s) in an atomic batch transaction.`
-            : `Successfully merged ${tasksToInsert.length} new task(s) into your cloud account in an atomic batch transaction.`
-        };
       }
 
-      return { success: false, tasksCount: 0, categoriesCount: 0, message: "Storage session unavailable." };
+      return {
+        success: true,
+        tasksCount: result.tasksCount,
+        categoriesCount: result.categoriesCount,
+        message: mode === 'replace'
+          ? `Successfully replaced ${result.tasksCount} item(s) in an atomic repository transaction.`
+          : `Successfully merged ${result.tasksCount} item(s) into repository.`
+      };
     } catch (err: any) {
       console.error("Backup import error:", err);
       return {
@@ -528,17 +373,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         message: err.message || "Failed to parse and import backup file."
       };
     }
-  }, [isGuest, user, tasks, categories, saveCategories]);
+  }, [tasks, categories, storageRepo, isGuest]);
 
   return (
     <AppContext.Provider value={{
       user, isGuest, tasks, categories, webhook, triggeredLogs, setTriggeredLogs, loading,
       searchQuery, setSearchQuery,
-      loginAsGuest, logout, addTask, updateTask, deleteTask, clearArchivedTasks, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry,
+      loginAsGuest, logout, addTask, updateTask, deleteTask, clearArchivedTasks, archiveTask, unarchiveTask,
+      saveWebhook, saveCategories, updateTelemetry,
       exportBackupJSON, downloadBackupFile, importBackupData
     }}>
       {children}
     </AppContext.Provider>
+  );
+};
+
+export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  return (
+    <UIProvider>
+      <AppProviderInner>{children}</AppProviderInner>
+    </UIProvider>
   );
 };
 

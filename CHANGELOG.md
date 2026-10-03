@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.0.0
+- **Major Architectural Overhaul: Separation of Concerns (SRP), Repository Pattern & Context Slicing**:
+  - **Storage Repository Pattern (`ITaskRepository`)**: Decoupled persistent data operations from the React application layer into dedicated repositories (`LocalStorageRepository` for Guest mode and `FirestoreRepository` for Cloud mode).
+  - **Pure Domain Recurrence Service (`RecurrenceEngine`)**: Extracted all date mathematics, overdue interval adjustments, recurrence rules, and hard cutoff checks into a pure TypeScript domain service (`RecurrenceEngine.ts`), isolating calendar logic for unit-testability and precision.
+  - **Context Slicing (`UIContext`)**: Sliced volatile UI state (`searchQuery`, `setSearchQuery`, `triggeredLogs`, `setTriggeredLogs`) out of monolithic state into an isolated `UIProvider`, preventing cascading re-renders across the entire task board and card lists when typing in search.
+  - **Single Responsibility Refactoring (`AppContext.tsx`)**: Refactored `AppContext` to act as a lightweight, clean coordinator between the sliced UI context, storage repositories, and domain services, preserving 100% backward compatibility for existing components.
+  - **Version 3.0 Milestone**: Synchronized application version to `v3.0.0` across all metadata, UI components, and documentation.
+
 ## v2.9.9
 - **Architectural Improvement 1: Atomic Batching & Transactional Integrity via Firestore `writeBatch`**:
   - **Atomic Backup Ingestion (`importBackupData`)**: Converted multi-document delete and insert loops in Cloud mode (`Firestore`) to atomic `writeBatch` chunks (up to 450 operations per batch). This eliminates partial failure states during backup replacement/merging and reduces network overhead from $O(N)$ sequential HTTP calls to single atomic batch commits.
