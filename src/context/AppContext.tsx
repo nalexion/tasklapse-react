@@ -341,7 +341,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const exportBackupJSON = useCallback((): BackupData => {
     return {
       app: 'TaskLapse',
-      version: '2.9.7',
+      version: '2.9.8',
       exportedAt: new Date().toISOString(),
       tasksCount: tasks.length,
       categoriesCount: categories.length,

@@ -1,13 +1,18 @@
 # Changelog
 
-## v2.9.7
-- **Complete JSON Backup & Offline Restore**:
-  - Full data backup export to structured JSON (`tasks`, `categories`, timestamps, and recurrence schedules) to ensure users always possess an offline copy of their commitments.
-  - Robust JSON import with schema sanitization, backward compatibility for legacy formats, and user selection between "Merge" and "Replace all" modes for both Guest (`localStorage`) and Cloud (`Firestore`).
-- **About & Support Section (`support@tasklapse.app`)**:
-  - Built an accessible Help & Support center with generic developer support contact (`support@tasklapse.app`).
-  - Pre-formatted mailto templates for bug reports, feature requests, and general questions, plus a one-click "Copy Email" button.
+## v2.9.8
+- **Offline JSON Backup & Restore Engine**:
+  - Full data backup export to structured JSON (`tasks`, `categories`, timestamps, and recurrence schedules) ensuring users always possess an offline copy of their commitments.
+  - Robust JSON import with schema sanitization, backward compatibility for legacy formats, and user selection between "Merge with current" and "Replace all" modes across Guest (`localStorage`) and Cloud (`Firestore`).
+  - Added dedicated Backup & Restore controls in Settings, an in-app About dialog shortcut, and a quick-action button in the dashboard footer.
+- **About & Support Center (`support@tasklapse.app`)**:
+  - Integrated Help & Support center modal with official developer support contact (`support@tasklapse.app`).
+  - Quick-action pre-formatted mailto templates for bug reports (with app version & device info), feature requests, and general questions, plus a one-click "Copy Email" button.
   - Comprehensive in-app FAQ covering Target Start vs. Expires dates, recurring cycles, and webhook automations.
+  - Linked across Header, Settings, and Dashboard footer.
+- **GitHub Sync Readiness**: Synchronized versioning across `package.json`, all UI components, and project documentation.
+
+## v2.9.7
 - **Item Display Card Polish**: Removed Target Start Date from the card details section, maintaining only the recurrence definition (`Recurs: Every ...`) and optional expiration timeline (`Expires: YYYY-MM-DD`).
 - **Comprehensive Mobile & Tablet Layout Optimization**:
   - Ultra-compact header actions with responsive button sizing and text clamping to completely eliminate overlapping on viewports from 320px up to 4K.
@@ -15,7 +20,7 @@
   - Dynamic user account tag with adaptive truncation based on viewport width.
 - **Category Filter Streamlining**: Removed the upcoming (future) category filter pill from the category navigation bar.
 - **Permanent Archive Purging**: Verified and reinforced individual archive item deletion and bulk "Clear All Archives" with safe two-step confirmation across both guest mode (`localStorage`) and cloud mode (`Firestore`).
-- **GitHub Release Preparation**: Added complete project `README.md` with system architecture, setup instructions, webhook payload specs, and deployment guide.
+- **GitHub Initial Release Documentation**: Added complete project `README.md`, MIT `LICENSE`, and environment specs.
 
 ## v2.9.6
 - **Task Logic Simplification**: Reverted task date calculations to the clean 2.9.6 standard; renamed primary date field to "Target Start Date" and introduced optional "Expires Date" field with cycle termination limits.

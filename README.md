@@ -1,6 +1,6 @@
 # TaskLapse - Smart Expiry, Renewal & Task Tracker
 
-[![Version](https://img.shields.io/badge/version-2.9.7-indigo.svg)](https://github.com)
+[![Version](https://img.shields.io/badge/version-2.9.8-indigo.svg)](https://github.com)
 [![React](https://img.shields.io/badge/React-19.0-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.2-purple.svg)](https://vitejs.dev/)
