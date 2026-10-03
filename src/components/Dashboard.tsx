@@ -5,17 +5,20 @@ import TaskModal from './TaskModal';
 import ArchiveModal from './ArchiveModal';
 import SettingsModal from './SettingsModal';
 import CategoriesModal from './CategoriesModal';
+import AboutModal from './AboutModal';
 import IntegrationPanel from './IntegrationPanel';
 import StatsRow from './StatsRow';
 import { useAppContext } from '../context/AppContext';
 import { resolveIcon, calculateDaysFromToday, isFutureDate } from '../utils';
+import { HelpCircle, Download } from 'lucide-react';
 
 export default function Dashboard() {
-  const { tasks, categories, webhook, updateTelemetry, isGuest, setTriggeredLogs } = useAppContext();
+  const { tasks, categories, webhook, updateTelemetry, isGuest, setTriggeredLogs, downloadBackupFile } = useAppContext();
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [taskIdToEdit, setTaskIdToEdit] = useState<string | null>(null);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('All');
   const [isSimulating, setIsSimulating] = useState(false);
@@ -182,6 +185,7 @@ export default function Dashboard() {
         onOpenArchive={() => setIsArchiveModalOpen(true)} 
         onOpenSettings={() => setIsSettingsModalOpen(true)} 
         onOpenCategories={() => setIsCategoriesModalOpen(true)}
+        onOpenAbout={() => setIsAboutModalOpen(true)}
         onSimulateAlarm={handleSimulateAlarm}
         isSimulating={isSimulating}
       />
@@ -238,6 +242,32 @@ export default function Dashboard() {
         <BoardColumns onEditTask={handleOpenTaskModal} categoryFilter={activeCategoryFilter} />
         
         <IntegrationPanel />
+
+        {/* Global Footer with Support Link & Quick Backup Action */}
+        <footer className="mt-12 pt-6 pb-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-slate-400">TaskLapse v2.9.7</span>
+            <span>•</span>
+            <button 
+              onClick={() => setIsAboutModalOpen(true)}
+              className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2 flex items-center gap-1 transition-colors"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>About & Support (support@tasklapse.app)</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={downloadBackupFile}
+              className="text-slate-400 hover:text-white flex items-center gap-1 transition-colors hover:underline"
+              title="Download offline JSON copy of your tasks"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Quick Offline JSON Backup</span>
+            </button>
+          </div>
+        </footer>
       </main>
 
       <TaskModal 
@@ -254,11 +284,18 @@ export default function Dashboard() {
       <SettingsModal 
         isOpen={isSettingsModalOpen} 
         onClose={() => setIsSettingsModalOpen(false)} 
+        onOpenAbout={() => setIsAboutModalOpen(true)}
       />
 
       <CategoriesModal
         isOpen={isCategoriesModalOpen}
         onClose={() => setIsCategoriesModalOpen(false)}
+      />
+
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
+        onOpenSettings={() => setIsSettingsModalOpen(true)}
       />
     </div>
   );

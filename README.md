@@ -42,10 +42,10 @@ TaskLapse is a modern, responsive personal productivity web application built fo
   - Drag-and-drop category reordering.
   - Horizontal drag-to-scroll filter bar for rapid filtering.
 
-- **💾 Dual Storage Drivers**:
+- **💾 Dual Storage Drivers & Offline Backups**:
   - **Guest Mode**: 100% offline-ready, persisted to browser `localStorage`.
   - **Cloud Mode**: Real-time multi-device synchronization via Firebase Authentication & Firestore.
-  - **Data Portability**: Full JSON backup export and import anytime.
+  - **Offline JSON Portability**: One-click JSON backup export (`tasklapse_backup_YYYY-MM-DD.json`) and import with support for "Merge" and "Replace all" modes. Ensure an offline copy of all your commitments is always at hand.
 
 - **📱 Pixel-Perfect Responsive Design**:
   - Engineered for zero overlapping from compact 320px mobile screens to large desktop monitors.
@@ -150,6 +150,14 @@ When the Daily Alarm is simulated and alert criteria match, TaskLapse dispatches
   "timestamp": "2026-10-03T12:00:00.000Z"
 }
 ```
+
+---
+
+## 💬 Support & Contact
+
+Have questions, found a bug, or want to suggest a new feature?
+- **Email**: [support@tasklapse.app](mailto:support@tasklapse.app)
+- **Feature Requests & Bug Reports**: Submit inquiries via the in-app **About & Support** dialog or by emailing support directly with your environment details.
 
 ---
 

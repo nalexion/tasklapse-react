@@ -35,3 +35,13 @@ export interface CategoryDef {
 
 export type Category = string;
 
+export interface BackupData {
+  app: string;
+  version: string;
+  exportedAt: string;
+  tasksCount: number;
+  categoriesCount?: number;
+  tasks: Task[];
+  categories?: CategoryDef[];
+}
+

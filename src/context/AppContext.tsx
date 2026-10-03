@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { auth, db } from '../config/firebase';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, onSnapshot, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { Task, WebhookData, CategoryDef } from '../types';
+import { Task, WebhookData, CategoryDef, BackupData } from '../types';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'Personal', name: 'Personal', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: '👤' },
@@ -35,6 +35,9 @@ interface AppContextType {
   saveWebhook: (url: string, targetEmail?: string, secret?: string) => Promise<void>;
   saveCategories: (newCategories: CategoryDef[]) => Promise<void>;
   updateTelemetry: (status: string) => Promise<void>;
+  exportBackupJSON: () => BackupData;
+  downloadBackupFile: () => void;
+  importBackupData: (data: any, mode?: 'replace' | 'merge') => Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -335,11 +338,167 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isGuest, user]);
 
+  const exportBackupJSON = useCallback((): BackupData => {
+    return {
+      app: 'TaskLapse',
+      version: '2.9.7',
+      exportedAt: new Date().toISOString(),
+      tasksCount: tasks.length,
+      categoriesCount: categories.length,
+      tasks: tasks,
+      categories: categories
+    };
+  }, [tasks, categories]);
+
+  const downloadBackupFile = useCallback(() => {
+    const backupObj = exportBackupJSON();
+    const dataStr = JSON.stringify(backupObj, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+    const exportFileDefaultName = `tasklapse_backup_${new Date().toISOString().split('T')[0]}.json`;
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    document.body.appendChild(linkElement);
+    linkElement.click();
+    document.body.removeChild(linkElement);
+  }, [exportBackupJSON]);
+
+  const importBackupData = useCallback(async (
+    rawInput: any, 
+    mode: 'replace' | 'merge' = 'replace'
+  ): Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }> => {
+    try {
+      let rawTasks: any[] = [];
+      let rawCategories: any[] = [];
+
+      if (Array.isArray(rawInput)) {
+        // Legacy backup format (array of tasks)
+        rawTasks = rawInput;
+      } else if (rawInput && typeof rawInput === 'object') {
+        if (Array.isArray(rawInput.tasks)) {
+          rawTasks = rawInput.tasks;
+        }
+        if (Array.isArray(rawInput.categories)) {
+          rawCategories = rawInput.categories;
+        }
+      } else {
+        throw new Error("Invalid backup format. Expected a JSON backup file or tasks array.");
+      }
+
+      if (rawTasks.length === 0 && rawCategories.length === 0) {
+        throw new Error("No tasks or categories found in the provided backup file.");
+      }
+
+      // Sanitize tasks
+      const sanitizedTasks: Task[] = rawTasks.map((t: any) => ({
+        id: t.id || crypto.randomUUID(),
+        name: String(t.name || 'Untitled Item'),
+        date: String(t.date || t.startDate || new Date().toISOString().split('T')[0]),
+        expiresDate: t.expiresDate ? String(t.expiresDate) : undefined,
+        startDate: t.startDate ? String(t.startDate) : undefined,
+        category: String(t.category || 'Personal'),
+        notes: String(t.notes || ''),
+        recurrence: String(t.recurrence || 'Does not repeat'),
+        alerts: t.alerts || { thirtyDays: false, sevenDays: true, oneDay: true },
+        archived: Boolean(t.archived),
+        archivedAt: t.archivedAt ? String(t.archivedAt) : undefined,
+        createdAt: t.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
+
+      // Sanitize categories
+      let sanitizedCategories: CategoryDef[] = [];
+      if (rawCategories.length > 0) {
+        sanitizedCategories = rawCategories.map((c: any) => ({
+          id: c.id || crypto.randomUUID(),
+          name: String(c.name || 'Custom'),
+          color: String(c.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30'),
+          icon: String(c.icon || '📁')
+        }));
+      }
+
+      if (isGuest) {
+        let finalTasks = sanitizedTasks;
+        if (mode === 'merge') {
+          const existingIds = new Set(tasks.map(t => t.id));
+          const newTasks = sanitizedTasks.filter(t => !existingIds.has(t.id));
+          finalTasks = [...tasks, ...newTasks];
+        }
+        setTasks(finalTasks);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(finalTasks));
+
+        if (sanitizedCategories.length > 0) {
+          let finalCategories = sanitizedCategories;
+          if (mode === 'merge') {
+            const existingCatIds = new Set(categories.map(c => c.id));
+            const newCats = sanitizedCategories.filter(c => !existingCatIds.has(c.id));
+            finalCategories = [...categories, ...newCats];
+          }
+          setCategories(finalCategories);
+          localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(finalCategories));
+        }
+
+        return {
+          success: true,
+          tasksCount: sanitizedTasks.length,
+          categoriesCount: sanitizedCategories.length,
+          message: `Successfully imported ${sanitizedTasks.length} task(s)${sanitizedCategories.length ? ` and ${sanitizedCategories.length} categories` : ''} into offline storage.`
+        };
+      } else if (user) {
+        const itemsCol = collection(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items');
+
+        if (mode === 'replace') {
+          for (const item of tasks) {
+            const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
+            await deleteDoc(ref);
+          }
+        }
+
+        for (const task of sanitizedTasks) {
+          const { id: _ignoredId, ...taskPayload } = task;
+          const cleanedPayload: any = { ...taskPayload };
+          Object.keys(cleanedPayload).forEach(key => {
+            if (cleanedPayload[key] === undefined) delete cleanedPayload[key];
+          });
+          await addDoc(itemsCol, cleanedPayload);
+        }
+
+        if (sanitizedCategories.length > 0) {
+          let finalCats = sanitizedCategories;
+          if (mode === 'merge') {
+            const existingCatIds = new Set(categories.map(c => c.id));
+            const newCats = sanitizedCategories.filter(c => !existingCatIds.has(c.id));
+            finalCats = [...categories, ...newCats];
+          }
+          await saveCategories(finalCats);
+        }
+
+        return {
+          success: true,
+          tasksCount: sanitizedTasks.length,
+          categoriesCount: sanitizedCategories.length,
+          message: `Successfully uploaded ${sanitizedTasks.length} task(s) to your cloud account.`
+        };
+      }
+
+      return { success: false, tasksCount: 0, categoriesCount: 0, message: "Storage session unavailable." };
+    } catch (err: any) {
+      console.error("Backup import error:", err);
+      return {
+        success: false,
+        tasksCount: 0,
+        categoriesCount: 0,
+        message: err.message || "Failed to parse and import backup file."
+      };
+    }
+  }, [isGuest, user, tasks, categories, saveCategories]);
+
   return (
     <AppContext.Provider value={{
       user, isGuest, tasks, categories, webhook, triggeredLogs, setTriggeredLogs, loading,
       searchQuery, setSearchQuery,
-      loginAsGuest, logout, addTask, updateTask, deleteTask, clearArchivedTasks, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry
+      loginAsGuest, logout, addTask, updateTask, deleteTask, clearArchivedTasks, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry,
+      exportBackupJSON, downloadBackupFile, importBackupData
     }}>
       {children}
     </AppContext.Provider>

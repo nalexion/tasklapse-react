@@ -1,6 +1,13 @@
 # Changelog
 
 ## v2.9.7
+- **Complete JSON Backup & Offline Restore**:
+  - Full data backup export to structured JSON (`tasks`, `categories`, timestamps, and recurrence schedules) to ensure users always possess an offline copy of their commitments.
+  - Robust JSON import with schema sanitization, backward compatibility for legacy formats, and user selection between "Merge" and "Replace all" modes for both Guest (`localStorage`) and Cloud (`Firestore`).
+- **About & Support Section (`support@tasklapse.app`)**:
+  - Built an accessible Help & Support center with generic developer support contact (`support@tasklapse.app`).
+  - Pre-formatted mailto templates for bug reports, feature requests, and general questions, plus a one-click "Copy Email" button.
+  - Comprehensive in-app FAQ covering Target Start vs. Expires dates, recurring cycles, and webhook automations.
 - **Item Display Card Polish**: Removed Target Start Date from the card details section, maintaining only the recurrence definition (`Recurs: Every ...`) and optional expiration timeline (`Expires: YYYY-MM-DD`).
 - **Comprehensive Mobile & Tablet Layout Optimization**:
   - Ultra-compact header actions with responsive button sizing and text clamping to completely eliminate overlapping on viewports from 320px up to 4K.

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Archive, Settings, LogOut, Tags, Bell, X } from 'lucide-react';
+import { Search, Archive, Settings, LogOut, Tags, Bell, X, HelpCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 interface HeaderProps {
@@ -7,6 +7,7 @@ interface HeaderProps {
   onOpenArchive: () => void;
   onOpenSettings: () => void;
   onOpenCategories: () => void;
+  onOpenAbout: () => void;
   onSimulateAlarm: () => void;
   isSimulating: boolean;
 }
@@ -15,6 +16,7 @@ export default function Header({
   onOpenArchive, 
   onOpenSettings, 
   onOpenCategories, 
+  onOpenAbout,
   onSimulateAlarm, 
   isSimulating 
 }: HeaderProps) {
@@ -128,9 +130,18 @@ export default function Header({
           <button 
             onClick={onOpenSettings} 
             className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 shrink-0" 
-            title="Settings & Webhooks"
+            title="Settings, Webhooks & Offline Backups"
           >
             <Settings className="w-4 h-4" />
+          </button>
+
+          {/* Help & Support (Desktop & Tablet) */}
+          <button 
+            onClick={onOpenAbout} 
+            className="hidden sm:flex w-8 h-8 sm:w-9 sm:h-9 items-center justify-center text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700 shrink-0" 
+            title="About & Support (support@tasklapse.app)"
+          >
+            <HelpCircle className="w-4 h-4 text-indigo-400" />
           </button>
           
           {/* Sign Out */}
