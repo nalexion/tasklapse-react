@@ -221,7 +221,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
                         <span>{resolveIcon(cat.icon)}</span> {cat.name}
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleEdit(cat)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded" title="Edit">
                         <Edit2 className="w-4 h-4" />
                       </button>

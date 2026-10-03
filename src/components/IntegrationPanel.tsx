@@ -61,9 +61,10 @@ export default function IntegrationPanel() {
                     {log.daysRemaining === 0 ? 'EXPIRES TODAY' : `${log.daysRemaining} days left`}
                   </span>
                 </div>
-                <div className="text-slate-400 text-xs">
-                  Category: {log.category} <br />
-                  Target Date: {log.expiryDate}
+                <div className="text-slate-400 text-xs space-y-0.5">
+                  <div>Category: {log.category}</div>
+                  <div>Target Start: <span className="text-indigo-300 font-mono">{log.startDate}</span></div>
+                  {log.expiresDate && <div>Expires Date: <span className="font-mono text-amber-300">{log.expiresDate}</span></div>}
                 </div>
               </div>
             ))}
@@ -109,25 +110,25 @@ export default function IntegrationPanel() {
           </div>
 
           <div className={`border ${statusBorder} rounded-lg p-4 mt-4`}>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LAST PIPELINE DELIVERY STATUS</span>
               <span className={`text-xs px-2 py-0.5 rounded border ${statusBorder} ${statusBg} ${statusColor} font-bold`}>
                 {webhook.lastStatus?.toUpperCase() || 'SUCCESS (200)'}
               </span>
             </div>
-            <div className="flex justify-between items-center text-sm">
+            <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
               <span className="text-slate-300">Trigger: expiration_alert</span>
               <span className="text-slate-300 font-mono">{webhook.lastTime || '11:00:03 AM'}</span>
             </div>
           </div>
         </div>
 
-        <div className="pt-6 flex justify-between items-center mt-4">
-          <span className="text-sm text-indigo-400 font-medium">Status: Firestore live synchronization active</span>
+        <div className="pt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
+          <span className="text-xs sm:text-sm text-indigo-400 font-medium">Status: Firestore live synchronization active</span>
           <button 
             onClick={handleSave} 
             disabled={isGuest}
-            className={`px-6 py-2 text-sm font-bold rounded-lg shadow-md transition-colors ${
+            className={`w-full sm:w-auto px-6 py-2 text-sm font-bold rounded-lg shadow-md transition-colors ${
               isGuest 
                 ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'

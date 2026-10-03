@@ -1,6 +1,17 @@
 # Changelog
 
-## v2.9.5
+## v2.9.7
+- **Item Display Card Polish**: Removed Target Start Date from the card details section, maintaining only the recurrence definition (`Recurs: Every ...`) and optional expiration timeline (`Expires: YYYY-MM-DD`).
+- **Comprehensive Mobile & Tablet Layout Optimization**:
+  - Ultra-compact header actions with responsive button sizing and text clamping to completely eliminate overlapping on viewports from 320px up to 4K.
+  - Responsive action buttons and search toggle with clean margins and touch-friendly targets.
+  - Dynamic user account tag with adaptive truncation based on viewport width.
+- **Category Filter Streamlining**: Removed the upcoming (future) category filter pill from the category navigation bar.
+- **Permanent Archive Purging**: Verified and reinforced individual archive item deletion and bulk "Clear All Archives" with safe two-step confirmation across both guest mode (`localStorage`) and cloud mode (`Firestore`).
+- **GitHub Release Preparation**: Added complete project `README.md` with system architecture, setup instructions, webhook payload specs, and deployment guide.
+
+## v2.9.6
+- **Task Logic Simplification**: Reverted task date calculations to the clean 2.9.6 standard; renamed primary date field to "Target Start Date" and introduced optional "Expires Date" field with cycle termination limits.
 - **Simulation Logs UI Restoration**: Reintroduced the visual array of triggered email notifications directly inside the interface integration panel, allowing users to visually verify which items were matched during a simulation dispatch.
 
 ## v2.9.5

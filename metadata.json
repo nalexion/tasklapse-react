@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "TaskLapse - Expiry & Renewal Tracker",
+  "description": "Smart expiration, renewal, and start date tracker with category organization, automated email webhooks, and responsive board columns.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

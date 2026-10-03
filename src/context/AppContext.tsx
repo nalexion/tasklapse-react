@@ -29,6 +29,7 @@ interface AppContextType {
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'archived'>) => Promise<void>;
   updateTask: (id: string, task: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
+  clearArchivedTasks: () => Promise<void>;
   archiveTask: (id: string) => Promise<void>;
   unarchiveTask: (id: string) => Promise<void>;
   saveWebhook: (url: string, targetEmail?: string, secret?: string) => Promise<void>;
@@ -159,8 +160,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, []);
 
   const addTask = useCallback(async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'archived'>) => {
+    const cleanedData: any = { ...taskData };
+    if (!cleanedData.startDate) {
+      delete cleanedData.startDate;
+    }
+    if (!cleanedData.expiresDate) {
+      delete cleanedData.expiresDate;
+    }
     const newTask: Partial<Task> = {
-      ...taskData,
+      ...cleanedData,
       archived: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -176,20 +184,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isGuest, user]);
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    const payload = { ...updates, updatedAt: new Date().toISOString() };
+    const cleanedUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
+    if (cleanedUpdates.startDate === '' || cleanedUpdates.startDate === undefined) {
+      delete cleanedUpdates.startDate;
+    }
+    if (cleanedUpdates.expiresDate === '' || cleanedUpdates.expiresDate === undefined) {
+      delete cleanedUpdates.expiresDate;
+    }
     
     if (isGuest) {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, ...payload } : t));
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, ...cleanedUpdates } : t));
     } else if (user) {
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
-      await updateDoc(ref, payload);
+      await updateDoc(ref, cleanedUpdates);
     }
   }, [isGuest, user]);
 
   const deleteTask = useCallback(async (id: string) => {
     if (isGuest) {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, archived: true, archivedAt: new Date().toISOString() } : t));
-      // wait, delete task should completely remove it
       setTasks(prev => prev.filter(t => t.id !== id));
     } else if (user) {
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', id);
@@ -197,18 +209,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [isGuest, user]);
 
+  const clearArchivedTasks = useCallback(async () => {
+    if (isGuest) {
+      setTasks(prev => prev.filter(t => !t.archived));
+    } else if (user) {
+      const toDelete = tasks.filter(t => t.archived);
+      for (const item of toDelete) {
+        const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'items', item.id);
+        await deleteDoc(ref);
+      }
+    }
+  }, [isGuest, user, tasks]);
+
   const archiveTask = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
 
     const validRecurrences = ['Every Week', 'Every 1 Month', 'Every 3 Months', 'Every 6 Months', 'Every 1 Year', 'Every 2 Years'];
     if (task.recurrence && validRecurrences.includes(task.recurrence)) {
+      // Check if task has an expiresDate and has already reached or passed it
+      if (task.expiresDate && task.date >= task.expiresDate) {
+        // Expiration date reached: do NOT regenerate another cycle
+        await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
+        return;
+      }
+
       // Roll original forward
       const dateParts = task.date.split('-');
       let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
       
       const now = new Date();
       now.setHours(0, 0, 0, 0);
+
+      // Also calculate new start date if task had one
+      let newStartDateStr: string | undefined = undefined;
+      let startDateObj: Date | null = null;
+      if (task.startDate) {
+        const startParts = task.startDate.split('-');
+        startDateObj = new Date(Number(startParts[0]), Number(startParts[1]) - 1, Number(startParts[2]));
+      }
 
       // Keep rolling forward until it is no longer overdue
       do {
@@ -222,8 +261,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       } while (dateObj < now);
       
       const newDateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+
+      // If the next calculated date exceeds expiresDate, the task expires and must not regenerate
+      if (task.expiresDate && newDateStr > task.expiresDate) {
+        await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
+        return;
+      }
       
-      // 1. Add clone to archive
+      // 1. Add clone of completed cycle to archive
       const { id: _oldId, ...cloneData } = task;
       const cloneRecord: any = { 
         ...cloneData, 
@@ -245,7 +290,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // 2. Roll original task forward
-      await updateTask(id, { date: newDateStr, updatedAt: new Date().toISOString() });
+      await updateTask(id, { 
+        date: newDateStr, 
+        updatedAt: new Date().toISOString() 
+      });
     } else {
       await updateTask(id, { archived: true, archivedAt: new Date().toISOString() });
     }
@@ -291,7 +339,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     <AppContext.Provider value={{
       user, isGuest, tasks, categories, webhook, triggeredLogs, setTriggeredLogs, loading,
       searchQuery, setSearchQuery,
-      loginAsGuest, logout, addTask, updateTask, deleteTask, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry
+      loginAsGuest, logout, addTask, updateTask, deleteTask, clearArchivedTasks, archiveTask, unarchiveTask, saveWebhook, saveCategories, updateTelemetry
     }}>
       {children}
     </AppContext.Provider>

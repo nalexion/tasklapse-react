@@ -8,8 +8,7 @@ import CategoriesModal from './CategoriesModal';
 import IntegrationPanel from './IntegrationPanel';
 import StatsRow from './StatsRow';
 import { useAppContext } from '../context/AppContext';
-import { Bell, Plus } from 'lucide-react';
-import { resolveIcon } from '../utils';
+import { resolveIcon, calculateDaysFromToday, isFutureDate } from '../utils';
 
 export default function Dashboard() {
   const { tasks, categories, webhook, updateTelemetry, isGuest, setTriggeredLogs } = useAppContext();
@@ -73,25 +72,26 @@ export default function Dashboard() {
 
   const handleSimulateAlarm = async () => {
     setIsSimulating(true);
-    // Mock simulation delay
+    // Simulation delay
     await new Promise(resolve => setTimeout(resolve, 800));
     setIsSimulating(false);
-    
-    const calculateDaysLeft = (dateString: string) => {
-      const due = new Date(dateString); 
-      const now = new Date();
-      due.setHours(0, 0, 0, 0); 
-      now.setHours(0, 0, 0, 0);
-      return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    };
 
     let activeTriggers = 0;
     const triggeredItems: any[] = [];
+    
     tasks.filter(t => !t.archived).forEach(task => {
-      const daysLeft = calculateDaysLeft(task.date);
+      // Items that have a Target Start Date in the future have not started yet;
+      // skip them so they don't trigger premature expiration warnings!
+      if (isFutureDate(task.date)) {
+        return;
+      }
+
+      // If task has an Expires Date, alarms trigger based on Expires Date; otherwise based on task.date
+      const daysLeft = task.expiresDate 
+        ? calculateDaysFromToday(task.expiresDate)
+        : calculateDaysFromToday(task.date);
       let isTriggered = false;
       
-      // Default fallback if alerts are missing for backward compatibility
       const alerts = task.alerts || { thirtyDays: false, sevenDays: true, oneDay: true };
 
       if (daysLeft === 0) {
@@ -109,7 +109,8 @@ export default function Dashboard() {
         triggeredItems.push({
           item: task.name,
           daysRemaining: daysLeft,
-          expiryDate: task.date,
+          startDate: task.date,
+          expiresDate: task.expiresDate || null,
           notes: task.notes || "",
           category: task.category || "Personal"
         });
@@ -131,7 +132,8 @@ export default function Dashboard() {
               event: "tasklapse_alerts", 
               item: item.item,
               daysRemaining: item.daysRemaining,
-              expiryDate: item.expiryDate,
+              targetStartDate: item.startDate,
+              expiresDate: item.expiresDate,
               notes: item.notes,
               category: item.category,
               driverMode: isGuest ? "local_storage" : "cloud_sync",
@@ -174,7 +176,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-slate-900 text-slate-100">
       <Header 
         onOpenTaskModal={() => handleOpenTaskModal()} 
         onOpenArchive={() => setIsArchiveModalOpen(true)} 
@@ -184,11 +186,14 @@ export default function Dashboard() {
         isSimulating={isSimulating}
       />
       
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-        <StatsRow categoryFilter={activeCategoryFilter} onOpenTaskModal={() => handleOpenTaskModal()} />
+      <main className="flex-1 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 w-full">
+        <StatsRow 
+          categoryFilter={activeCategoryFilter} 
+          onOpenTaskModal={() => handleOpenTaskModal()} 
+        />
         
-        {/* Category Filters & Simulate Button */}
-        <div className="glass-panel p-2 rounded-xl mb-6 flex items-center justify-between gap-4 border-slate-700/50">
+        {/* Category Filters Bar */}
+        <div className="glass-panel p-2 rounded-xl mb-6 flex items-center justify-between gap-2 border-slate-700/50">
           <div className="flex-1 overflow-hidden">
             <div 
               ref={scrollContainerRef}
@@ -196,23 +201,34 @@ export default function Dashboard() {
               onMouseLeave={handleMouseLeave}
               onMouseUp={handleMouseUp}
               onMouseMove={handleMouseMove}
-              className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide cursor-grab active:cursor-grabbing" 
+              className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 scrollbar-hide cursor-grab active:cursor-grabbing touch-pan-x" 
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+              
               <button 
                  onClick={(e) => handleCategoryClick('All', e)}
-                 className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${activeCategoryFilter === 'All' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'}`}
+                 className={`shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
+                   activeCategoryFilter === 'All' 
+                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                     : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                 }`}
               >
                 All Categories
               </button>
+
               {categories.map(cat => (
                  <button
                    key={cat.id}
                    onClick={(e) => handleCategoryClick(cat.id, e)}
-                   className={`shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 whitespace-nowrap ${activeCategoryFilter === cat.id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'}`}
+                   className={`shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                     activeCategoryFilter === cat.id 
+                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                       : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700'
+                   }`}
                  >
-                   <span>{resolveIcon(cat.icon)}</span> {cat.name}
+                   <span>{resolveIcon(cat.icon)}</span>
+                   <span>{cat.name}</span>
                  </button>
               ))}
             </div>

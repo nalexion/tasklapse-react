@@ -1,7 +1,9 @@
 export interface Task {
   id: string;
   name: string;
-  date: string;
+  date: string; // Target Start Date
+  expiresDate?: string; // Optional Expires Date
+  startDate?: string; // Legacy fallback
   category: string;
   notes: string;
   recurrence?: string;
