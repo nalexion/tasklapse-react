@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Archive, X, Trash2, Search, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { resolveIcon } from '../utils';
+import { resolveIcon, resolveCategoryDef } from '../utils';
 
 interface ArchiveModalProps {
   isOpen: boolean;
@@ -128,10 +128,7 @@ export default function ArchiveModal({ isOpen, onClose }: ArchiveModalProps) {
         <div className="p-3 sm:p-5 overflow-y-auto flex-1 space-y-3 bg-slate-900/20">
           {archivedTasks.length > 0 ? (
             archivedTasks.map(t => {
-              let cat = categories.find(c => c.id === t.category);
-              if (!cat) {
-                cat = categories.find(c => c.name.toLowerCase() === t.category?.toLowerCase() || c.id.toLowerCase() === t.category?.toLowerCase());
-              }
+              const cat = resolveCategoryDef(categories, t.category);
               const catName = cat?.name || t.category || 'N/A';
               const catColor = cat?.color || 'bg-slate-800 text-slate-300 border-slate-700/50';
               const catIcon = cat?.icon || '📁';

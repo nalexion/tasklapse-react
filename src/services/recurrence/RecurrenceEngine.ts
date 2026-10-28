@@ -12,8 +12,9 @@ export const VALID_RECURRENCES = [
 export type ValidRecurrence = typeof VALID_RECURRENCES[number];
 
 export interface RollForwardResult {
-  cloneRecord: Record<string, any>;
+  cloneRecord: Record<string, unknown>;
   nextDateStr: string;
+  anchorStartDate: string;
   isExpired: boolean;
 }
 
@@ -110,22 +111,27 @@ export class RecurrenceEngine {
    * Processes a task when checked off / completed:
    * - Evaluates expiration limits
    * - Computes overdue intervals to roll the task forward until it is in the present/future
-   * - Preserves anchor day-of-month so month-end items (e.g. 31st) don't drift into subsequent days
+   * - Preserves anchor day-of-month across multi-cycle rollovers via `task.startDate || task.date`
+   *   so month-end items (e.g. Jan 31 -> Feb 28 -> Mar 31) never permanently stick to the 28th
    * - Generates the historical archive clone record
    */
   static rollForwardTask(task: Task): RollForwardResult {
+    const anchorStartDate = task.startDate || task.date;
+
     // Check if task already reached or passed its hard expiration cutoff
     if (task.expiresDate && task.date >= task.expiresDate) {
       return {
         cloneRecord: {},
         nextDateStr: task.date,
+        anchorStartDate,
         isExpired: true
       };
     }
 
+    const anchorParts = anchorStartDate.split('-');
     const dateParts = task.date.split('-');
-    const anchorDay = Number(dateParts[2]);
-    let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, anchorDay);
+    const anchorDay = anchorParts.length === 3 ? Number(anchorParts[2]) : Number(dateParts[2]);
+    let dateObj = new Date(Number(dateParts[0]), Number(dateParts[1]) - 1, Number(dateParts[2]));
     
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -156,13 +162,14 @@ export class RecurrenceEngine {
       return {
         cloneRecord: {},
         nextDateStr,
+        anchorStartDate,
         isExpired: true
       };
     }
 
     // Build the completed cycle clone record for archive history
     const { id: _oldId, ...cloneData } = task;
-    const cloneRecord: Record<string, any> = {
+    const cloneRecord: Record<string, unknown> = {
       ...cloneData,
       archived: true,
       archivedAt: new Date().toISOString(),
@@ -177,6 +184,7 @@ export class RecurrenceEngine {
     return {
       cloneRecord,
       nextDateStr,
+      anchorStartDate,
       isExpired: false
     };
   }

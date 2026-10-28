@@ -38,14 +38,18 @@ export class LocalStorageRepository implements ITaskRepository {
 
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
     const tasks = this.getStoredTasks();
-    const cleanedUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
-    if (cleanedUpdates.startDate === '' || cleanedUpdates.startDate === undefined) {
-      delete cleanedUpdates.startDate;
-    }
-    if (cleanedUpdates.expiresDate === '' || cleanedUpdates.expiresDate === undefined) {
-      delete cleanedUpdates.expiresDate;
-    }
-    const updated = tasks.map(t => (t.id === id ? { ...t, ...cleanedUpdates } : t));
+    const nowIso = new Date().toISOString();
+    const updated = tasks.map(t => {
+      if (t.id !== id) return t;
+      const merged: Task = { ...t, ...updates, updatedAt: nowIso };
+      if ('startDate' in updates && (updates.startDate === '' || updates.startDate === undefined)) {
+        delete merged.startDate;
+      }
+      if ('expiresDate' in updates && (updates.expiresDate === '' || updates.expiresDate === undefined)) {
+        delete merged.expiresDate;
+      }
+      return merged;
+    });
     this.saveStoredTasks(updated);
   }
 
@@ -63,13 +67,19 @@ export class LocalStorageRepository implements ITaskRepository {
 
   async archiveRecurringTask(
     originalId: string,
-    cloneRecord: Record<string, any>,
-    nextDateStr: string
-  ): Promise<void> {
+    cloneRecord: Record<string, unknown>,
+    nextDateStr: string,
+    anchorStartDate?: string
+  ): Promise<Task> {
     const tasks = this.getStoredTasks();
     const updatedOriginals = tasks.map(t =>
       t.id === originalId
-        ? { ...t, date: nextDateStr, updatedAt: new Date().toISOString() }
+        ? {
+            ...t,
+            date: nextDateStr,
+            startDate: anchorStartDate || t.startDate || t.date,
+            updatedAt: new Date().toISOString()
+          }
         : t
     );
     const archiveClone: Task = {
@@ -77,6 +87,7 @@ export class LocalStorageRepository implements ITaskRepository {
       id: crypto.randomUUID()
     } as Task;
     this.saveStoredTasks([...updatedOriginals, archiveClone]);
+    return archiveClone;
   }
 
   async archiveSingleTask(id: string): Promise<void> {

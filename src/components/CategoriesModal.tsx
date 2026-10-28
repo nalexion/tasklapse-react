@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Settings, X, Plus, Trash2, Edit2, Tag, GripVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Trash2, Edit2, Tag, GripVertical, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { CategoryDef } from '../types';
 import { resolveIcon } from '../utils';
@@ -31,6 +31,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   const [editIcon, setEditIcon] = useState('👤');
   const [editColor, setEditColor] = useState(AVAILABLE_COLORS[0].class);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [feedbackBanner, setFeedbackBanner] = useState<string | null>(null);
 
   const [localCategories, setLocalCategories] = useState<CategoryDef[]>(categories);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -40,7 +41,21 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
     setLocalCategories(categories);
   }, [categories]);
 
+  useEffect(() => {
+    if (isOpen) {
+      setFeedbackBanner(null);
+      setDeleteConfirmId(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const showTemporaryFeedback = (msg: string) => {
+    setFeedbackBanner(msg);
+    setTimeout(() => {
+      setFeedbackBanner(prev => (prev === msg ? null : prev));
+    }, 3500);
+  };
 
   const handleDragStart = (e: React.DragEvent, index: number) => {
     setDraggedIndex(index);
@@ -76,6 +91,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   };
 
   const handleEdit = (cat: CategoryDef) => {
+    setFeedbackBanner(null);
     setEditingId(cat.id);
     setEditName(cat.name);
     setEditIcon(cat.icon);
@@ -83,6 +99,7 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   };
 
   const handleAddNew = () => {
+    setFeedbackBanner(null);
     setEditingId('new');
     setEditName('');
     setEditIcon('👤');
@@ -90,35 +107,53 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
   };
 
   const handleSave = async () => {
-    if (!editName.trim()) return;
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      showTemporaryFeedback('Category name cannot be empty.');
+      return;
+    }
+
+    const isDuplicate = categories.some(
+      c => c.id !== editingId && c.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (isDuplicate) {
+      showTemporaryFeedback(`A category named "${trimmed}" already exists.`);
+      return;
+    }
     
     let newCategories = [...categories];
     
     if (editingId === 'new') {
       const newCat: CategoryDef = {
         id: crypto.randomUUID(),
-        name: editName.trim(),
+        name: trimmed,
         icon: editIcon,
         color: editColor
       };
       newCategories.push(newCat);
     } else {
       newCategories = newCategories.map(c => 
-        c.id === editingId ? { ...c, name: editName.trim(), icon: editIcon, color: editColor } : c
+        c.id === editingId ? { ...c, name: trimmed, icon: editIcon, color: editColor } : c
       );
     }
     
     await saveCategories(newCategories);
     setEditingId(null);
+    setFeedbackBanner(null);
   };
 
   const handleDelete = async (id: string) => {
+    if (categories.length <= 1) {
+      showTemporaryFeedback('At least one category must remain in TaskLapse.');
+      setDeleteConfirmId(null);
+      return;
+    }
     if (deleteConfirmId === id) {
       await saveCategories(categories.filter(c => c.id !== id));
       setDeleteConfirmId(null);
     } else {
       setDeleteConfirmId(id);
-      setTimeout(() => setDeleteConfirmId(null), 3000);
+      setTimeout(() => setDeleteConfirmId(prev => (prev === id ? null : prev)), 3000);
     }
   };
 
@@ -135,6 +170,12 @@ export default function CategoriesModal({ isOpen, onClose }: CategoriesModalProp
         </div>
         
         <div className="p-5 overflow-y-auto flex-1 space-y-4">
+          {feedbackBanner && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>{feedbackBanner}</span>
+            </div>
+          )}
           {editingId ? (
             <div className="space-y-4 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
               <h4 className="font-semibold text-white mb-2">{editingId === 'new' ? 'Add New Category' : 'Edit Category'}</h4>

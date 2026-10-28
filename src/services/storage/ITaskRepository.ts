@@ -35,9 +35,10 @@ export interface ITaskRepository {
    */
   archiveRecurringTask(
     originalId: string,
-    cloneRecord: Record<string, any>,
-    nextDateStr: string
-  ): Promise<void>;
+    cloneRecord: Record<string, unknown>,
+    nextDateStr: string,
+    anchorStartDate?: string
+  ): Promise<Task>;
 
   /**
    * Archives a single non-recurring or expired task.

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import { SchemaValidator } from '../services/validation/SchemaValidator';
+import { resolveCategoryDef } from '../utils';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -27,15 +29,9 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
         if (task) {
           setName(task.name);
           
-          let matchedCatId = task.category;
-          const exactMatch = categories.find(c => c.id === task.category);
-          if (!exactMatch) {
-            const fuzzyMatch = categories.find(c => c.name.toLowerCase() === task.category?.toLowerCase() || c.id.toLowerCase() === task.category?.toLowerCase());
-            if (fuzzyMatch) matchedCatId = fuzzyMatch.id;
-          }
-
-          setCategory(matchedCatId || (categories[0]?.id || 'Personal'));
-          setDate(task.date || (task as any).startDate || '');
+          const matchedCat = resolveCategoryDef(categories, task.category);
+          setCategory(matchedCat?.id || task.category || (categories[0]?.id || 'Personal'));
+          setDate(task.date || task.startDate || '');
           setExpiresDate(task.expiresDate || '');
           setNotes(task.notes || '');
           setRecurrence(task.recurrence || 'Does not repeat');
@@ -67,12 +63,12 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
       setError("Name must be at least 2 characters.");
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setError("Target Start Date format required (YYYY-MM-DD).");
+    if (!SchemaValidator.isValidCalendarDate(date)) {
+      setError("Please enter a valid calendar Target Start Date (YYYY-MM-DD).");
       return;
     }
-    if (expiresDate && !/^\d{4}-\d{2}-\d{2}$/.test(expiresDate)) {
-      setError("Expires Date format required (YYYY-MM-DD).");
+    if (expiresDate && !SchemaValidator.isValidCalendarDate(expiresDate)) {
+      setError("Please enter a valid calendar Expires Date (YYYY-MM-DD).");
       return;
     }
     if (expiresDate && date && expiresDate < date) {
@@ -82,9 +78,17 @@ export default function TaskModal({ isOpen, onClose, taskIdToEdit }: TaskModalPr
     setError('');
 
     try {
+      const existingTask = taskIdToEdit ? tasks.find(t => t.id === taskIdToEdit) : undefined;
+      // Preserve existing startDate if user didn't change `date`, or update `startDate` if user explicitly changed `date`
+      const anchorStartDate =
+        existingTask && existingTask.date === date
+          ? (existingTask.startDate || date)
+          : date;
+
       const taskPayload = { 
         name: trimmedName, 
         date, // Target Start Date
+        startDate: anchorStartDate,
         expiresDate: expiresDate ? expiresDate : undefined,
         category, 
         notes: notes.trim(), 

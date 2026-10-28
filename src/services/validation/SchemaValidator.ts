@@ -37,12 +37,13 @@ export class SchemaValidator {
   /**
    * Sanitizes and validates a single task document against strict contract rules.
    */
-  static validateAndSanitizeTask(raw: any, index: number): { task?: Task; error?: string; warning?: string } {
-    if (!raw || typeof raw !== 'object') {
+  static validateAndSanitizeTask(raw: unknown, index: number): { task?: Task; error?: string; warning?: string } {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       return { error: `Item #${index + 1}: Invalid item structure (expected an object).` };
     }
 
-    const name = String(raw.name || '').trim();
+    const record = raw as Record<string, unknown>;
+    const name = String(record.name || '').trim();
     if (!name) {
       return { error: `Item #${index + 1}: Missing required title/name.` };
     }
@@ -51,41 +52,43 @@ export class SchemaValidator {
     }
 
     // Determine target start / active date
-    let rawDate = raw.date || raw.startDate;
+    let rawDate = record.date || record.startDate;
     if (!rawDate) {
       rawDate = new Date().toISOString().split('T')[0];
     } else {
       rawDate = String(rawDate).trim();
     }
 
-    if (!this.isValidCalendarDate(rawDate)) {
+    if (!this.isValidCalendarDate(String(rawDate))) {
       return { error: `Item #${index + 1} ("${name}"): Invalid date format or calendar day "${rawDate}". Expected YYYY-MM-DD.` };
     }
 
+    const validDateStr = String(rawDate);
+
     // Optional expiresDate
     let sanitizedExpiresDate: string | undefined = undefined;
-    if (raw.expiresDate) {
-      const expStr = String(raw.expiresDate).trim();
+    if (record.expiresDate) {
+      const expStr = String(record.expiresDate).trim();
       if (!this.isValidCalendarDate(expStr)) {
         return { error: `Item #${index + 1} ("${name}"): Invalid Expires Date "${expStr}". Expected YYYY-MM-DD.` };
       }
-      if (expStr < rawDate) {
-        return { error: `Item #${index + 1} ("${name}"): Expires Date (${expStr}) cannot be earlier than the Target Date (${rawDate}).` };
+      if (expStr < validDateStr) {
+        return { error: `Item #${index + 1} ("${name}"): Expires Date (${expStr}) cannot be earlier than the Target Date (${validDateStr}).` };
       }
       sanitizedExpiresDate = expStr;
     }
 
     // Optional recurrence
     let sanitizedRecurrence = 'Does not repeat';
-    if (raw.recurrence) {
-      const rec = String(raw.recurrence).trim();
+    if (record.recurrence) {
+      const rec = String(record.recurrence).trim();
       if ((VALID_RECURRENCES as readonly string[]).includes(rec) || rec === 'Does not repeat') {
         sanitizedRecurrence = rec;
       }
     }
 
     // Alerts
-    const rawAlerts = raw.alerts || {};
+    const rawAlerts = (record.alerts && typeof record.alerts === 'object' ? record.alerts : {}) as Record<string, unknown>;
     const alerts = {
       thirtyDays: Boolean(rawAlerts.thirtyDays),
       sevenDays: rawAlerts.sevenDays !== undefined ? Boolean(rawAlerts.sevenDays) : true,
@@ -93,18 +96,18 @@ export class SchemaValidator {
     };
 
     const task: Task = {
-      id: raw.id && typeof raw.id === 'string' ? raw.id : crypto.randomUUID(),
+      id: record.id && typeof record.id === 'string' ? record.id : crypto.randomUUID(),
       name,
-      date: rawDate,
+      date: validDateStr,
       expiresDate: sanitizedExpiresDate,
-      startDate: raw.startDate && this.isValidCalendarDate(String(raw.startDate)) ? String(raw.startDate) : undefined,
-      category: String(raw.category || 'Personal').trim() || 'Personal',
-      notes: String(raw.notes || '').slice(0, 2000),
+      startDate: record.startDate && this.isValidCalendarDate(String(record.startDate)) ? String(record.startDate) : undefined,
+      category: String(record.category || 'Personal').trim() || 'Personal',
+      notes: String(record.notes || '').slice(0, 2000),
       recurrence: sanitizedRecurrence,
       alerts,
-      archived: Boolean(raw.archived),
-      archivedAt: raw.archivedAt ? String(raw.archivedAt) : undefined,
-      createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString(),
+      archived: Boolean(record.archived),
+      archivedAt: record.archivedAt ? String(record.archivedAt) : undefined,
+      createdAt: record.createdAt ? String(record.createdAt) : new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
@@ -114,19 +117,20 @@ export class SchemaValidator {
   /**
    * Sanitizes and validates a category definition.
    */
-  static validateAndSanitizeCategory(raw: any, index: number): CategoryDef {
+  static validateAndSanitizeCategory(raw: unknown, index: number): CategoryDef {
+    const record = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
     return {
-      id: raw.id && typeof raw.id === 'string' ? raw.id : `cat_${index}_${crypto.randomUUID()}`,
-      name: String(raw.name || 'Custom Category').slice(0, 50).trim(),
-      color: String(raw.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30'),
-      icon: String(raw.icon || '📁').slice(0, 10)
+      id: record.id && typeof record.id === 'string' ? record.id : `cat_${index}_${crypto.randomUUID()}`,
+      name: String(record.name || 'Custom Category').slice(0, 50).trim(),
+      color: String(record.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30'),
+      icon: String(record.icon || '📁').slice(0, 10)
     };
   }
 
   /**
    * Validates a complete backup import payload (supporting modern structure or legacy arrays).
    */
-  static validateBackupPayload(rawInput: any): ValidationReport {
+  static validateBackupPayload(rawInput: unknown): ValidationReport {
     const errors: string[] = [];
     const warnings: string[] = [];
     const sanitizedTasks: Task[] = [];
@@ -142,18 +146,19 @@ export class SchemaValidator {
       };
     }
 
-    let rawTasks: any[] = [];
-    let rawCats: any[] = [];
+    let rawTasks: unknown[] = [];
+    let rawCats: unknown[] = [];
 
     if (Array.isArray(rawInput)) {
       rawTasks = rawInput;
       warnings.push('Importing from a legacy task array format.');
     } else {
-      if (Array.isArray(rawInput.tasks)) {
-        rawTasks = rawInput.tasks;
+      const payloadObj = rawInput as Record<string, unknown>;
+      if (Array.isArray(payloadObj.tasks)) {
+        rawTasks = payloadObj.tasks;
       }
-      if (Array.isArray(rawInput.categories)) {
-        rawCats = rawInput.categories;
+      if (Array.isArray(payloadObj.categories)) {
+        rawCats = payloadObj.categories;
       }
     }
 

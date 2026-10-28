@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, writeBatch, setDoc, Firestore } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, writeBatch, setDoc, deleteField, Firestore } from 'firebase/firestore';
 import { Task, CategoryDef } from '../../types';
 import { ITaskRepository, BatchImportResult } from './ITaskRepository';
 
@@ -39,12 +39,12 @@ export class FirestoreRepository implements ITaskRepository {
   }
 
   async updateTask(id: string, updates: Partial<Task>): Promise<void> {
-    const cleanedUpdates: any = { ...updates, updatedAt: new Date().toISOString() };
-    if (cleanedUpdates.startDate === '' || cleanedUpdates.startDate === undefined) {
-      delete cleanedUpdates.startDate;
+    const cleanedUpdates: Record<string, any> = { ...updates, updatedAt: new Date().toISOString() };
+    if ('startDate' in updates && (updates.startDate === '' || updates.startDate === undefined)) {
+      cleanedUpdates.startDate = deleteField();
     }
-    if (cleanedUpdates.expiresDate === '' || cleanedUpdates.expiresDate === undefined) {
-      delete cleanedUpdates.expiresDate;
+    if ('expiresDate' in updates && (updates.expiresDate === '' || updates.expiresDate === undefined)) {
+      cleanedUpdates.expiresDate = deleteField();
     }
     await updateDoc(this.itemDoc(id), cleanedUpdates);
   }
@@ -68,9 +68,10 @@ export class FirestoreRepository implements ITaskRepository {
 
   async archiveRecurringTask(
     originalId: string,
-    cloneRecord: Record<string, any>,
-    nextDateStr: string
-  ): Promise<void> {
+    cloneRecord: Record<string, unknown>,
+    nextDateStr: string,
+    anchorStartDate?: string
+  ): Promise<Task> {
     const batch = writeBatch(this.db);
     const cloneRef = doc(this.itemsCol);
     batch.set(cloneRef, cloneRecord);
@@ -78,10 +79,12 @@ export class FirestoreRepository implements ITaskRepository {
     const originalRef = this.itemDoc(originalId);
     batch.update(originalRef, {
       date: nextDateStr,
+      ...(anchorStartDate ? { startDate: anchorStartDate } : {}),
       updatedAt: new Date().toISOString()
     });
 
     await batch.commit();
+    return { ...cloneRecord, id: cloneRef.id } as Task;
   }
 
   async archiveSingleTask(id: string): Promise<void> {

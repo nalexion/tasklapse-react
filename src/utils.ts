@@ -1,4 +1,7 @@
 import { RecurrenceEngine } from './services/recurrence/RecurrenceEngine';
+import { Task, CategoryDef } from './types';
+
+export const APP_VERSION = '3.1.0';
 
 export const resolveIcon = (iconName: string): string => {
   const legacyMap: Record<string, string> = {
@@ -11,6 +14,22 @@ export const resolveIcon = (iconName: string): string => {
     'Bell': '🔔', 'Circle': '⚪', 'Tag': '🏷️'
   };
   return legacyMap[iconName] || iconName;
+};
+
+/**
+ * Resolves a CategoryDef by exact ID first, then falls back to case-insensitive ID or name match.
+ */
+export const resolveCategoryDef = (
+  categories: CategoryDef[],
+  categoryIdOrName?: string
+): CategoryDef | undefined => {
+  if (!categoryIdOrName) return undefined;
+  const exact = categories.find(c => c.id === categoryIdOrName);
+  if (exact) return exact;
+  const lower = categoryIdOrName.toLowerCase();
+  return categories.find(
+    c => c.id.toLowerCase() === lower || c.name.toLowerCase() === lower
+  );
 };
 
 /**
@@ -33,6 +52,15 @@ export const calculateDaysFromToday = (dateString?: string): number => {
   return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 };
 
+/**
+ * Calculates effective days remaining for a task:
+ * Prioritizes `expiresDate` when present, otherwise uses `date` (Target Start Date).
+ */
+export const getTaskDaysLeft = (task: Pick<Task, 'date' | 'expiresDate'>): number => {
+  if (task.expiresDate) return calculateDaysFromToday(task.expiresDate);
+  return calculateDaysFromToday(task.date);
+};
+
 export const isFutureDate = (dateString?: string): boolean => {
   if (!dateString) return false;
   return calculateDaysFromToday(dateString) > 0;
@@ -46,3 +74,4 @@ export const calculateDueDateFromStart = (startDate: string, recurrence: string)
   if (!startDate) return '';
   return RecurrenceEngine.calculateNextDate(startDate, recurrence);
 };
+

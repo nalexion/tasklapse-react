@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import TaskCard from './TaskCard';
 import { Task } from '../types';
-import { calculateDaysFromToday, isFutureDate } from '../utils';
+import { getTaskDaysLeft } from '../utils';
 
 interface BoardColumnsProps {
   onEditTask: (id: string) => void;
@@ -11,11 +11,6 @@ interface BoardColumnsProps {
 
 export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumnsProps) {
   const { tasks, searchQuery, archiveTask } = useAppContext();
-
-  const getDaysLeft = (t: Task): number => {
-    if (t.expiresDate) return calculateDaysFromToday(t.expiresDate);
-    return calculateDaysFromToday(t.date);
-  };
 
   const activeTasks = useMemo(() => {
     let active = tasks.filter(t => !t.archived);
@@ -31,13 +26,17 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
         (t.notes && t.notes.toLowerCase().includes(lowerQuery))
       );
     }
-    return active.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return active.sort((a, b) => {
+      const diff = getTaskDaysLeft(a) - getTaskDaysLeft(b);
+      if (diff !== 0) return diff;
+      return a.date.localeCompare(b.date);
+    });
   }, [tasks, searchQuery, categoryFilter]);
 
   const { days, weeks, months } = useMemo(() => {
     const res = { days: [] as Task[], weeks: [] as Task[], months: [] as Task[] };
     activeTasks.forEach(t => {
-      const dl = getDaysLeft(t);
+      const dl = getTaskDaysLeft(t);
       if (dl <= 7) {
         res.days.push(t);
       } else if (dl <= 31) {
@@ -72,7 +71,7 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
               <TaskCard 
                 key={t.id} 
                 task={t} 
-                daysLeft={getDaysLeft(t)} 
+                daysLeft={getTaskDaysLeft(t)} 
                 onEdit={onEditTask} 
                 onArchive={archiveTask} 
               />
@@ -102,7 +101,7 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
               <TaskCard 
                 key={t.id} 
                 task={t} 
-                daysLeft={getDaysLeft(t)} 
+                daysLeft={getTaskDaysLeft(t)} 
                 onEdit={onEditTask} 
                 onArchive={archiveTask} 
               />
@@ -132,7 +131,7 @@ export default function BoardColumns({ onEditTask, categoryFilter }: BoardColumn
               <TaskCard 
                 key={t.id} 
                 task={t} 
-                daysLeft={getDaysLeft(t)} 
+                daysLeft={getTaskDaysLeft(t)} 
                 onEdit={onEditTask} 
                 onArchive={archiveTask} 
               />

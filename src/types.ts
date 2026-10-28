@@ -35,6 +35,15 @@ export interface CategoryDef {
 
 export type Category = string;
 
+export interface TriggeredAlertLog {
+  item: string;
+  daysRemaining: number;
+  startDate: string;
+  expiresDate: string | null;
+  notes: string;
+  category: string;
+}
+
 export interface BackupData {
   app: string;
   version: string;
@@ -44,4 +53,3 @@ export interface BackupData {
   tasks: Task[];
   categories?: CategoryDef[];
 }
-

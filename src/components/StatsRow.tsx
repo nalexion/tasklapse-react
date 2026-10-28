@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { ClipboardList, AlertCircle, Clock, CheckCircle, Plus } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
-import { calculateDaysFromToday, isFutureDate } from '../utils';
-import { Task } from '../types';
+import { getTaskDaysLeft } from '../utils';
 
 interface StatsRowProps {
   categoryFilter?: string;
@@ -11,11 +10,6 @@ interface StatsRowProps {
 
 export default function StatsRow({ categoryFilter, onOpenTaskModal }: StatsRowProps) {
   const { tasks, searchQuery } = useAppContext();
-
-  const getDaysLeft = (t: Task): number => {
-    if (t.expiresDate) return calculateDaysFromToday(t.expiresDate);
-    return calculateDaysFromToday(t.date);
-  };
 
   const activeTasks = useMemo(() => {
     let active = tasks.filter(t => !t.archived);
@@ -36,7 +30,7 @@ export default function StatsRow({ categoryFilter, onOpenTaskModal }: StatsRowPr
   const { days, weeks, months } = useMemo(() => {
     const res = { days: 0, weeks: 0, months: 0 };
     activeTasks.forEach(t => {
-      const dl = getDaysLeft(t);
+      const dl = getTaskDaysLeft(t);
       if (dl <= 7) {
         res.days++;
       } else if (dl <= 31) {

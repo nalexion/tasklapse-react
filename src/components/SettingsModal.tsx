@@ -24,8 +24,12 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
   const [url, setUrl] = useState('');
   const [targetEmail, setTargetEmail] = useState('');
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
-  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+  const [webhookStatus, setWebhookStatus] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isConfirmingReplaceImport, setIsConfirmingReplaceImport] = useState(false);
+  const [isConfirmingDisconnect, setIsConfirmingDisconnect] = useState(false);
+  const [isConfirmingDeleteData, setIsConfirmingDeleteData] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -33,6 +37,10 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
       setUrl(webhook.url || '');
       setTargetEmail(webhook.targetEmail || '');
       setImportStatus(null);
+      setWebhookStatus(null);
+      setIsConfirmingReplaceImport(false);
+      setIsConfirmingDisconnect(false);
+      setIsConfirmingDeleteData(false);
     }
   }, [isOpen, webhook]);
 
@@ -40,29 +48,52 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
 
   const handleSave = async () => {
     if (isGuest) {
-      alert("Configuring webhooks requires cloud registration.");
+      setWebhookStatus({
+        type: 'warning',
+        message: 'Configuring automated webhooks requires a Cloud Sync account. Sign in to save webhook endpoints.'
+      });
       return;
     }
     await saveWebhook(url.trim(), targetEmail.trim());
-    onClose();
+    setWebhookStatus({
+      type: 'success',
+      message: 'Webhook configuration saved.'
+    });
+    setTimeout(() => {
+      onClose();
+    }, 600);
   };
 
   const handleDisconnect = () => {
-    if (window.confirm("Are you sure you want to disconnect cloud sync? You will be returned to Guest mode.")) {
-      logout();
-      onClose();
+    if (!isConfirmingDisconnect) {
+      setIsConfirmingDisconnect(true);
+      setTimeout(() => setIsConfirmingDisconnect(false), 3500);
+      return;
     }
+    setIsConfirmingDisconnect(false);
+    logout();
+    onClose();
   };
   
   const handleDeleteData = () => {
-    if (window.confirm("Delete all local data? This action cannot be undone.")) {
-      localStorage.clear();
-      window.location.reload();
+    if (!isConfirmingDeleteData) {
+      setIsConfirmingDeleteData(true);
+      setTimeout(() => setIsConfirmingDeleteData(false), 3500);
+      return;
     }
+    setIsConfirmingDeleteData(false);
+    localStorage.clear();
+    window.location.reload();
   };
 
   const handleImportClick = () => {
     setImportStatus(null);
+    if (importMode === 'replace' && tasks.length > 0 && !isConfirmingReplaceImport) {
+      setIsConfirmingReplaceImport(true);
+      setTimeout(() => setIsConfirmingReplaceImport(false), 4000);
+      return;
+    }
+    setIsConfirmingReplaceImport(false);
     fileInputRef.current?.click();
   };
 
@@ -77,7 +108,7 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
     reader.onload = async (event) => {
       try {
         const rawContent = event.target?.result as string;
-        const parsedJSON = JSON.parse(rawContent);
+        const parsedJSON: unknown = JSON.parse(rawContent);
         
         const result = await importBackupData(parsedJSON, importMode);
         if (result.success) {
@@ -91,10 +122,11 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
             message: result.message
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to parse JSON backup file.";
         setImportStatus({
           type: 'error',
-          message: err.message || "Failed to parse JSON backup file."
+          message
         });
       } finally {
         setIsImporting(false);
@@ -168,7 +200,10 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
                     type="radio" 
                     name="importMode" 
                     checked={importMode === 'merge'} 
-                    onChange={() => setImportMode('merge')} 
+                    onChange={() => {
+                      setImportMode('merge');
+                      setIsConfirmingReplaceImport(false);
+                    }} 
                     className="text-indigo-600 focus:ring-indigo-500 bg-slate-800"
                   />
                   <span>Merge with current</span>
@@ -178,7 +213,10 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
                     type="radio" 
                     name="importMode" 
                     checked={importMode === 'replace'} 
-                    onChange={() => setImportMode('replace')} 
+                    onChange={() => {
+                      setImportMode('replace');
+                      setIsConfirmingReplaceImport(false);
+                    }} 
                     className="text-indigo-600 focus:ring-indigo-500 bg-slate-800"
                   />
                   <span>Replace all</span>
@@ -210,11 +248,21 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
                 type="button"
                 onClick={handleImportClick}
                 disabled={isImporting}
-                className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors border border-slate-700 flex items-center justify-center gap-2 disabled:opacity-50"
+                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-lg transition-colors border flex items-center justify-center gap-2 disabled:opacity-50 ${
+                  isConfirmingReplaceImport
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/50'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                }`}
                 title="Upload JSON backup"
               >
-                <Upload className="w-3.5 h-3.5 text-indigo-400" />
-                <span>{isImporting ? 'Importing...' : 'Import JSON Backup'}</span>
+                <Upload className={`w-3.5 h-3.5 ${isConfirmingReplaceImport ? 'text-amber-300' : 'text-indigo-400'}`} />
+                <span>
+                  {isImporting
+                    ? 'Importing...'
+                    : isConfirmingReplaceImport
+                    ? 'Confirm Overwrite All?'
+                    : 'Import JSON Backup'}
+                </span>
               </button>
             </div>
           </div>
@@ -249,13 +297,31 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
               Automated Notification Webhook
             </h4>
+
+            {webhookStatus && (
+              <div className={`p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+                webhookStatus.type === 'success'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+              }`}>
+                {webhookStatus.type === 'success' ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                )}
+                <span>{webhookStatus.message}</span>
+              </div>
+            )}
             
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Incoming Webhook Endpoint</label>
               <input 
                 type="url" 
                 value={url}
-                onChange={e => setUrl(e.target.value)}
+                onChange={e => {
+                  setUrl(e.target.value);
+                  setWebhookStatus(null);
+                }}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-xs sm:text-sm" 
                 placeholder="https://hook.make.com/..." 
               />
@@ -266,7 +332,10 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
               <input 
                 type="email" 
                 value={targetEmail}
-                onChange={e => setTargetEmail(e.target.value)}
+                onChange={e => {
+                  setTargetEmail(e.target.value);
+                  setWebhookStatus(null);
+                }}
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-xs sm:text-sm" 
                 placeholder="user@example.com" 
               />
@@ -299,17 +368,29 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
               <button 
                 type="button"
                 onClick={handleDisconnect} 
-                className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg border border-slate-700 transition-colors"
+                className={`w-full py-2 px-3 text-xs font-semibold rounded-lg border transition-colors ${
+                  isConfirmingDisconnect
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/50'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                }`}
               >
-                Disconnect Cloud Sync
+                {isConfirmingDisconnect
+                  ? 'Confirm Disconnect Cloud Sync? (Click again)'
+                  : 'Disconnect Cloud Sync'}
               </button>
             ) : (
               <button 
                 type="button"
                 onClick={handleDeleteData} 
-                className="text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors"
+                className={`w-full py-2 px-3 rounded-lg border text-xs font-bold transition-colors ${
+                  isConfirmingDeleteData
+                    ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-500 shadow-md'
+                    : 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border-rose-500/30'
+                }`}
               >
-                Delete Offline Local Storage Data
+                {isConfirmingDeleteData
+                  ? 'Confirm Delete All Local Data? (Cannot be undone)'
+                  : 'Delete Offline Local Storage Data'}
               </button>
             )}
           </div>

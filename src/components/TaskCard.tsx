@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Task } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { resolveIcon, calculateDaysFromToday, isFutureDate } from '../utils';
+import { resolveIcon, calculateDaysFromToday, isFutureDate, resolveCategoryDef } from '../utils';
 import { Clock, Check, Edit3, Trash2, Repeat } from 'lucide-react';
 
 interface TaskCardProps {
@@ -15,14 +15,7 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
   const { categories, deleteTask } = useAppContext();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-  let categoryDef = categories.find(c => c.id === task.category);
-  
-  if (!categoryDef) {
-    categoryDef = categories.find(c => 
-      c.name.toLowerCase() === task.category?.toLowerCase() || 
-      c.id.toLowerCase() === task.category?.toLowerCase()
-    );
-  }
+  const categoryDef = resolveCategoryDef(categories, task.category);
 
   const categoryColor = categoryDef?.color || 'bg-slate-500/20 text-slate-300 border-slate-500/30';
   const categoryName = categoryDef?.name || task.category || 'Personal';

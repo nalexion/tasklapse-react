@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Rocket } from 'lucide-react';
+import { Mail, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function IntegrationPanel() {
   const { webhook, saveWebhook, isGuest, triggeredLogs, setTriggeredLogs } = useAppContext();
   const [url, setUrl] = useState('');
   const [secret, setSecret] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
 
   useEffect(() => {
     setUrl(webhook.url || '');
@@ -14,9 +15,19 @@ export default function IntegrationPanel() {
 
   const handleSave = async () => {
     if (isGuest) {
+      setSaveFeedback({
+        type: 'warning',
+        message: 'Cloud account required to persist automated webhook endpoints.'
+      });
+      setTimeout(() => setSaveFeedback(null), 3500);
       return;
     }
-    await saveWebhook(url.trim(), secret.trim());
+    await saveWebhook(url.trim(), undefined, secret.trim());
+    setSaveFeedback({
+      type: 'success',
+      message: 'Webhook endpoint and authentication secret saved to Cloud Sync.'
+    });
+    setTimeout(() => setSaveFeedback(null), 3500);
   };
 
   const handleClearLogs = () => {
@@ -78,13 +89,34 @@ export default function IntegrationPanel() {
           <span className="text-xl">🚀</span>
           <h3 className="font-bold text-white text-lg flex items-center gap-3">
             Cloud Notification Integrations
-            <span className="text-xs px-2 py-0.5 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">Cloud Active</span>
+            <span className={`text-xs px-2 py-0.5 rounded border ${
+              isGuest
+                ? 'border-slate-600 bg-slate-800 text-slate-400'
+                : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+            }`}>
+              {isGuest ? 'Guest Mode' : 'Cloud Active'}
+            </span>
           </h3>
         </div>
         
-        <p className="text-sm text-slate-300 mb-6">
+        <p className="text-sm text-slate-300 mb-4">
           Set up a Make/Zapier webhook to turn these simulation logs into actual emails directly inside your personal mailbox.
         </p>
+
+        {saveFeedback && (
+          <div className={`mb-4 p-2.5 rounded-lg border text-xs flex items-center gap-2 ${
+            saveFeedback.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+          }`}>
+            {saveFeedback.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+            )}
+            <span>{saveFeedback.message}</span>
+          </div>
+        )}
 
         <div className="space-y-4 flex-1">
           <div>
@@ -92,7 +124,10 @@ export default function IntegrationPanel() {
             <input 
               type="url" 
               value={url}
-              onChange={e => setUrl(e.target.value)}
+              onChange={e => {
+                setUrl(e.target.value);
+                setSaveFeedback(null);
+              }}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm" 
               placeholder="https://hook.eu1.make.com/..." 
             />
@@ -103,7 +138,10 @@ export default function IntegrationPanel() {
             <input 
               type="password" 
               value={secret}
-              onChange={e => setSecret(e.target.value)}
+              onChange={e => {
+                setSecret(e.target.value);
+                setSaveFeedback(null);
+              }}
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-sm font-mono tracking-widest" 
               placeholder="••••••••••••••••••••" 
             />
@@ -113,24 +151,26 @@ export default function IntegrationPanel() {
             <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">LAST PIPELINE DELIVERY STATUS</span>
               <span className={`text-xs px-2 py-0.5 rounded border ${statusBorder} ${statusBg} ${statusColor} font-bold`}>
-                {webhook.lastStatus?.toUpperCase() || 'SUCCESS (200)'}
+                {webhook.lastStatus?.toUpperCase() || 'AWAITING DISPATCH'}
               </span>
             </div>
             <div className="flex flex-wrap justify-between items-center gap-2 text-sm">
               <span className="text-slate-300">Trigger: expiration_alert</span>
-              <span className="text-slate-300 font-mono">{webhook.lastTime || '11:00:03 AM'}</span>
+              <span className="text-slate-300 font-mono">{webhook.lastTime || '--'}</span>
             </div>
           </div>
         </div>
 
         <div className="pt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mt-4">
-          <span className="text-xs sm:text-sm text-indigo-400 font-medium">Status: Firestore live synchronization active</span>
+          <span className="text-xs sm:text-sm text-indigo-400 font-medium">
+            {isGuest ? 'Status: Offline local storage active (Sign in for Cloud Webhooks)' : 'Status: Firestore live synchronization active'}
+          </span>
           <button 
+            type="button"
             onClick={handleSave} 
-            disabled={isGuest}
             className={`w-full sm:w-auto px-6 py-2 text-sm font-bold rounded-lg shadow-md transition-colors ${
               isGuest 
-                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
                 : 'bg-indigo-600 hover:bg-indigo-700 text-white'
             }`}
           >

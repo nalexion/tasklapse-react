@@ -2,13 +2,14 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { auth, db } from '../config/firebase';
 import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { collection, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore';
-import { Task, WebhookData, CategoryDef, BackupData } from '../types';
+import { Task, WebhookData, CategoryDef, BackupData, TriggeredAlertLog } from '../types';
 import { RecurrenceEngine } from '../services/recurrence/RecurrenceEngine';
 import { ITaskRepository } from '../services/storage/ITaskRepository';
 import { LocalStorageRepository, LOCAL_STORAGE_KEY, LOCAL_CATEGORIES_KEY } from '../services/storage/LocalStorageRepository';
 import { FirestoreRepository } from '../services/storage/FirestoreRepository';
 import { SchemaValidator } from '../services/validation/SchemaValidator';
 import { UIProvider, useUIContext } from './UIContext';
+import { APP_VERSION } from '../utils';
 
 export const DEFAULT_CATEGORIES: CategoryDef[] = [
   { id: 'Personal', name: 'Personal', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', icon: '👤' },
@@ -25,8 +26,8 @@ export interface AppContextType {
   tasks: Task[];
   categories: CategoryDef[];
   webhook: WebhookData;
-  triggeredLogs: any[];
-  setTriggeredLogs: React.Dispatch<React.SetStateAction<any[]>>;
+  triggeredLogs: TriggeredAlertLog[];
+  setTriggeredLogs: React.Dispatch<React.SetStateAction<TriggeredAlertLog[]>>;
   loading: boolean;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -43,7 +44,7 @@ export interface AppContextType {
   updateTelemetry: (status: string) => Promise<void>;
   exportBackupJSON: () => BackupData;
   downloadBackupFile: () => void;
-  importBackupData: (data: any, mode?: 'replace' | 'merge') => Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }>;
+  importBackupData: (data: unknown, mode?: 'replace' | 'merge') => Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -174,7 +175,18 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
     await storageRepo.updateTask(id, updates);
     if (isGuest) {
-      setTasks(prev => prev.map(t => (t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t)));
+      const nowIso = new Date().toISOString();
+      setTasks(prev => prev.map(t => {
+        if (t.id !== id) return t;
+        const merged: Task = { ...t, ...updates, updatedAt: nowIso };
+        if ('startDate' in updates && (updates.startDate === '' || updates.startDate === undefined)) {
+          delete merged.startDate;
+        }
+        if ('expiresDate' in updates && (updates.expiresDate === '' || updates.expiresDate === undefined)) {
+          delete merged.expiresDate;
+        }
+        return merged;
+      }));
     }
   }, [storageRepo, isGuest]);
 
@@ -198,7 +210,7 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     if (!task) return;
 
     if (task.recurrence && RecurrenceEngine.isValidRecurrence(task.recurrence)) {
-      const { cloneRecord, nextDateStr, isExpired } = RecurrenceEngine.rollForwardTask(task);
+      const { cloneRecord, nextDateStr, anchorStartDate, isExpired } = RecurrenceEngine.rollForwardTask(task);
 
       if (isExpired) {
         await storageRepo.archiveSingleTask(id);
@@ -208,11 +220,11 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         return;
       }
 
-      await storageRepo.archiveRecurringTask(id, cloneRecord, nextDateStr);
+      const archivedClone = await storageRepo.archiveRecurringTask(id, cloneRecord, nextDateStr, anchorStartDate);
       if (isGuest) {
         setTasks(prev => {
-          const updated = prev.map(t => (t.id === id ? { ...t, date: nextDateStr, updatedAt: new Date().toISOString() } : t));
-          return [...updated, { ...cloneRecord, id: crypto.randomUUID() } as Task];
+          const updated = prev.map(t => (t.id === id ? { ...t, date: nextDateStr, startDate: anchorStartDate, updatedAt: new Date().toISOString() } : t));
+          return [...updated, archivedClone];
         });
       }
     } else {
@@ -241,7 +253,9 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const saveCategories = useCallback(async (newCategories: CategoryDef[]) => {
     setCategories(newCategories);
-    if (user && !isGuest) {
+    if (isGuest) {
+      localStorage.setItem(LOCAL_CATEGORIES_KEY, JSON.stringify(newCategories));
+    } else if (user) {
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'categories');
       await setDoc(ref, { items: newCategories }, { merge: true });
     }
@@ -260,7 +274,7 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   const exportBackupJSON = useCallback((): BackupData => {
     return {
       app: 'TaskLapse',
-      version: '3.0.1',
+      version: APP_VERSION,
       exportedAt: new Date().toISOString(),
       tasksCount: tasks.length,
       categoriesCount: categories.length,
@@ -283,7 +297,7 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [exportBackupJSON]);
 
   const importBackupData = useCallback(async (
-    rawInput: any,
+    rawInput: unknown,
     mode: 'replace' | 'merge' = 'replace'
   ): Promise<{ success: boolean; tasksCount: number; categoriesCount: number; message: string }> => {
     try {
