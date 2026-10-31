@@ -9,7 +9,7 @@ import AboutModal from './AboutModal';
 import IntegrationPanel from './IntegrationPanel';
 import StatsRow from './StatsRow';
 import { useAppContext } from '../context/AppContext';
-import { resolveIcon, getTaskDaysLeft, isFutureDate, APP_VERSION } from '../utils';
+import { resolveIcon, calculateDaysFromToday, APP_VERSION } from '../utils';
 import { TriggeredAlertLog } from '../types';
 import { HelpCircle, Download, CheckCircle, AlertTriangle, Info, X, Settings } from 'lucide-react';
 
@@ -97,20 +97,14 @@ export default function Dashboard() {
     const triggeredItems: TriggeredAlertLog[] = [];
     
     tasks.filter(t => !t.archived).forEach(task => {
-      // Items that have a Target Start Date in the future have not started yet;
-      // skip them so they don't trigger premature expiration warnings!
-      if (isFutureDate(task.date)) {
-        return;
-      }
-
-      // If task has an Expires Date, alarms trigger based on Expires Date; otherwise based on task.date
-      const daysLeft = getTaskDaysLeft(task);
+      // Follow Target Start Date (task.date) for email alert trigger calculations
+      const daysLeft = calculateDaysFromToday(task.date);
       let isTriggered = false;
       
       const alerts = task.alerts || { thirtyDays: false, sevenDays: true, oneDay: true };
 
       if (daysLeft === 0) {
-        isTriggered = true; // Trigger on the exact day of expiry
+        isTriggered = true; // Trigger on the exact Target Start Date
       } else if (daysLeft === 1 && alerts.oneDay) {
         isTriggered = true;
       } else if (daysLeft === 7 && alerts.sevenDays) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Task } from '../types';
 import { useAppContext } from '../context/AppContext';
-import { resolveIcon, calculateDaysFromToday, isFutureDate, resolveCategoryDef } from '../utils';
+import { resolveIcon, isFutureDate, resolveCategoryDef } from '../utils';
 import { Clock, Check, Edit3, Trash2, Repeat } from 'lucide-react';
 
 interface TaskCardProps {
@@ -27,30 +27,7 @@ export default function TaskCard({ task, daysLeft, onEdit, onArchive }: TaskCard
   let badgeClass = 'bg-slate-900/60 text-slate-300 border-slate-700/60';
   let statusBadgeText = '';
 
-  if (task.expiresDate) {
-    const expDays = calculateDaysFromToday(task.expiresDate);
-    if (expDays < 0) {
-      urgencyClass = 'bg-red-950/20 border-red-500/50 hover:border-red-400';
-      badgeClass = 'bg-red-500/20 text-red-400 border-red-500/40 font-bold';
-      statusBadgeText = `Expired (${Math.abs(expDays)}d ago)`;
-    } else if (expDays === 0) {
-      urgencyClass = 'bg-rose-950/30 border-rose-500/60 hover:border-rose-400 animate-pulse';
-      badgeClass = 'bg-rose-500/30 text-rose-300 border-rose-500/50 font-bold';
-      statusBadgeText = 'Expires Today';
-    } else if (expDays <= 1) {
-      urgencyClass = 'bg-rose-950/20 border-rose-500/40 hover:border-rose-400';
-      badgeClass = 'bg-rose-500/20 text-rose-400 border-rose-500/30 font-bold';
-      statusBadgeText = '1d left (Tomorrow)';
-    } else if (expDays <= 7) {
-      urgencyClass = 'bg-slate-800/90 border-amber-500/40 hover:border-amber-400';
-      badgeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/30 font-semibold';
-      statusBadgeText = `${expDays}d left`;
-    } else {
-      urgencyClass = 'bg-slate-800/80 border-slate-700/80 hover:border-slate-600';
-      badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-medium';
-      statusBadgeText = `${expDays}d left`;
-    }
-  } else if (isFutureStart) {
+  if (isFutureStart) {
     urgencyClass = 'bg-slate-800/90 border-sky-500/40 hover:border-sky-400 shadow-sm shadow-sky-500/5';
     badgeClass = 'bg-sky-500/20 text-sky-300 border-sky-500/40 font-semibold';
     statusBadgeText = `Starts in ${daysLeft}d`;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, X, Download, Upload, HelpCircle, Shield, AlertTriangle, CheckCircle, Mail } from 'lucide-react';
+import { Settings, X, Download, Upload, HelpCircle, Shield, AlertTriangle, CheckCircle, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 interface SettingsModalProps {
@@ -23,6 +23,8 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
 
   const [url, setUrl] = useState('');
   const [targetEmail, setTargetEmail] = useState('');
+  const [secret, setSecret] = useState('');
+  const [showSecret, setShowSecret] = useState(false);
   const [importMode, setImportMode] = useState<'replace' | 'merge'>('merge');
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
   const [webhookStatus, setWebhookStatus] = useState<{ type: 'success' | 'warning'; message: string } | null>(null);
@@ -36,6 +38,8 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
     if (isOpen) {
       setUrl(webhook.url || '');
       setTargetEmail(webhook.targetEmail || '');
+      setSecret(webhook.secret || '');
+      setShowSecret(false);
       setImportStatus(null);
       setWebhookStatus(null);
       setIsConfirmingReplaceImport(false);
@@ -47,14 +51,7 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    if (isGuest) {
-      setWebhookStatus({
-        type: 'warning',
-        message: 'Configuring automated webhooks requires a Cloud Sync account. Sign in to save webhook endpoints.'
-      });
-      return;
-    }
-    await saveWebhook(url.trim(), targetEmail.trim());
+    await saveWebhook(url.trim(), targetEmail.trim(), secret.trim());
     setWebhookStatus({
       type: 'success',
       message: 'Webhook configuration saved.'
@@ -339,6 +336,36 @@ export default function SettingsModal({ isOpen, onClose, onOpenAbout }: Settings
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-indigo-500 outline-none text-xs sm:text-sm" 
                 placeholder="user@example.com" 
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Webhook Secret</span>
+              </label>
+              <div className="relative">
+                <input 
+                  type={showSecret ? "text" : "password"} 
+                  value={secret}
+                  onChange={e => {
+                    setSecret(e.target.value);
+                    setWebhookStatus(null);
+                  }}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-9 py-2 text-white focus:border-indigo-500 outline-none text-xs sm:text-sm font-mono" 
+                  placeholder="Enter webhook secret or auth token..." 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowSecret(prev => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1 rounded transition-colors"
+                  title={showSecret ? "Hide secret" : "Show secret"}
+                >
+                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Sent as <span className="font-mono text-slate-400">auth_secret</span> in the webhook payload. Update periodically as needed.
+              </p>
             </div>
 
             {/* Delivery Telemetry */}

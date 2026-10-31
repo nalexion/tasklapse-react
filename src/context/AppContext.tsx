@@ -5,7 +5,7 @@ import { collection, onSnapshot, doc, getDoc, setDoc } from 'firebase/firestore'
 import { Task, WebhookData, CategoryDef, BackupData, TriggeredAlertLog } from '../types';
 import { RecurrenceEngine } from '../services/recurrence/RecurrenceEngine';
 import { ITaskRepository } from '../services/storage/ITaskRepository';
-import { LocalStorageRepository, LOCAL_STORAGE_KEY, LOCAL_CATEGORIES_KEY } from '../services/storage/LocalStorageRepository';
+import { LocalStorageRepository, LOCAL_STORAGE_KEY, LOCAL_CATEGORIES_KEY, LOCAL_WEBHOOK_KEY } from '../services/storage/LocalStorageRepository';
 import { FirestoreRepository } from '../services/storage/FirestoreRepository';
 import { SchemaValidator } from '../services/validation/SchemaValidator';
 import { UIProvider, useUIContext } from './UIContext';
@@ -129,7 +129,17 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   const loginAsGuest = useCallback(() => {
     setIsGuest(true);
     setUser(null);
-    setWebhook({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
+
+    const localWebhook = localStorage.getItem(LOCAL_WEBHOOK_KEY);
+    if (localWebhook) {
+      try {
+        setWebhook(JSON.parse(localWebhook));
+      } catch {
+        setWebhook({ url: '', targetEmail: '', secret: '', lastStatus: 'None', lastTime: '--' });
+      }
+    } else {
+      setWebhook({ url: '', targetEmail: '', secret: '', lastStatus: 'None', lastTime: '--' });
+    }
 
     const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (localData) {
@@ -162,7 +172,7 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     setUser(null);
     setTasks([]);
     setCategories(DEFAULT_CATEGORIES);
-    setWebhook({ url: '', secret: '', lastStatus: 'None', lastTime: '--' });
+    setWebhook({ url: '', targetEmail: '', secret: '', lastStatus: 'None', lastTime: '--' });
   }, []);
 
   const addTask = useCallback(async (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'archived'>) => {
@@ -240,11 +250,23 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   }, [updateTask]);
 
   const saveWebhook = useCallback(async (url: string, targetEmail?: string, secret?: string) => {
-    if (isGuest) return;
+    const currentSecret = secret !== undefined ? secret : (webhook.secret || '');
+    const currentEmail = targetEmail !== undefined ? targetEmail : (webhook.targetEmail || '');
+    const newWebhook: WebhookData = {
+      url,
+      targetEmail: currentEmail,
+      secret: currentSecret,
+      lastStatus: "Updated",
+      lastTime: new Date().toLocaleString()
+    };
+
+    if (isGuest) {
+      localStorage.setItem(LOCAL_WEBHOOK_KEY, JSON.stringify(newWebhook));
+      setWebhook(prev => ({ ...prev, ...newWebhook }));
+      return;
+    }
+
     if (user) {
-      const currentSecret = secret !== undefined ? secret : webhook.secret;
-      const currentEmail = targetEmail !== undefined ? targetEmail : webhook.targetEmail;
-      const newWebhook = { url, targetEmail: currentEmail, secret: currentSecret || '', lastStatus: "Updated", lastTime: new Date().toLocaleString() };
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
       await setDoc(ref, newWebhook, { merge: true });
       setWebhook(prev => ({ ...prev, ...newWebhook }));
@@ -264,7 +286,13 @@ const AppProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
   const updateTelemetry = useCallback(async (status: string) => {
     const time = new Date().toLocaleString();
     const updates = { lastStatus: status, lastTime: time };
-    setWebhook(prev => ({ ...prev, ...updates }));
+    setWebhook(prev => {
+      const updated = { ...prev, ...updates };
+      if (isGuest) {
+        localStorage.setItem(LOCAL_WEBHOOK_KEY, JSON.stringify(updated));
+      }
+      return updated;
+    });
     if (!isGuest && user) {
       const ref = doc(db, 'artifacts', DEFAULT_APP_ID, 'users', user.uid, 'settings', 'webhook');
       await setDoc(ref, updates, { merge: true });

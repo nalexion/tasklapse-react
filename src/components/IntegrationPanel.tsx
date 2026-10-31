@@ -69,7 +69,7 @@ export default function IntegrationPanel() {
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-bold text-white">{log.item}</span>
                   <span className={`text-xs px-2 py-0.5 rounded ${log.daysRemaining === 0 ? 'bg-rose-500/20 text-rose-400' : (log.daysRemaining === 1 ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/20 text-indigo-400')}`}>
-                    {log.daysRemaining === 0 ? 'EXPIRES TODAY' : `${log.daysRemaining} days left`}
+                    {log.daysRemaining === 0 ? 'STARTS TODAY' : `Starts in ${log.daysRemaining}d`}
                   </span>
                 </div>
                 <div className="text-slate-400 text-xs space-y-0.5">

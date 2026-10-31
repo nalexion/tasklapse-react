@@ -1,7 +1,7 @@
 import { RecurrenceEngine } from './services/recurrence/RecurrenceEngine';
 import { Task, CategoryDef } from './types';
 
-export const APP_VERSION = '3.1.0';
+export const APP_VERSION = '3.1.2';
 
 export const resolveIcon = (iconName: string): string => {
   const legacyMap: Record<string, string> = {
@@ -53,11 +53,9 @@ export const calculateDaysFromToday = (dateString?: string): number => {
 };
 
 /**
- * Calculates effective days remaining for a task:
- * Prioritizes `expiresDate` when present, otherwise uses `date` (Target Start Date).
+ * Calculates effective days remaining for a task based on its Target Start Date (`date`).
  */
-export const getTaskDaysLeft = (task: Pick<Task, 'date' | 'expiresDate'>): number => {
-  if (task.expiresDate) return calculateDaysFromToday(task.expiresDate);
+export const getTaskDaysLeft = (task: Pick<Task, 'date'>): number => {
   return calculateDaysFromToday(task.date);
 };
 

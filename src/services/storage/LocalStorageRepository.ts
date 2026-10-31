@@ -3,6 +3,7 @@ import { ITaskRepository, BatchImportResult } from './ITaskRepository';
 
 export const LOCAL_STORAGE_KEY = 'tasklapse_local_items';
 export const LOCAL_CATEGORIES_KEY = 'tasklapse_local_categories';
+export const LOCAL_WEBHOOK_KEY = 'tasklapse_local_webhook';
 
 /**
  * Concrete Task Repository for Offline Guest Mode (persisted to LocalStorage).
